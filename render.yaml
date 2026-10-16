@@ -1,0 +1,68 @@
+# AFTERBYTE Render blueprint — API + worker + Postgres + Redis.
+# Apply via the Render dashboard (Blueprints → New Blueprint → repo sporefyi/afterbyte)
+# or POST /v1/blueprints. Free plans: web/worker spin down when idle;
+# free Postgres has historically expired after ~30 days — confirm in dashboard.
+services:
+  - type: web
+    name: afterbyte-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health/live
+    plan: free
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: afterbyte-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: afterbyte-redis
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: RUN_MIGRATIONS
+        value: true
+      - key: PUBLIC_SITE_URL
+        value: https://afterbyte-izcg.netlify.app
+      - key: API_ORIGIN
+        value: https://afterbyte-api.onrender.com
+      - key: ALLOWED_ORIGINS
+        value: https://afterbyte-izcg.netlify.app
+      - key: PAYMENTS_ENABLED
+        value: false
+      - key: TOKEN_ENABLED
+        value: false
+
+  - type: worker
+    name: afterbyte-worker
+    runtime: docker
+    dockerfilePath: ./apps/worker/Dockerfile
+    dockerContext: .
+    plan: free
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: afterbyte-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: afterbyte-redis
+          property: connectionString
+
+  - type: redis
+    name: afterbyte-redis
+    plan: free
+    ipAllowList: []
+
+databases:
+  - name: afterbyte-db
+    plan: free
