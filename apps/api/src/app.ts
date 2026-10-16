@@ -24,6 +24,8 @@ export interface AppDependencies {
   config: ApiConfig;
   capabilities: Capabilities;
   store: ReadStore;
+  /** Which read store backs the API: 'postgres' (production) or 'memory' (dev/test fallback). */
+  database: 'postgres' | 'memory';
   challenges: ChallengeStore;
   sessions: SessionStore;
   adminStore: AdminStore;
@@ -92,7 +94,11 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
   };
 
   // System probes at root (no /api/v1 prefix, no envelope).
-  await fastify.register(systemRoutes, { config: deps.config, capabilities: deps.capabilities });
+  await fastify.register(systemRoutes, {
+    config: deps.config,
+    capabilities: deps.capabilities,
+    database: deps.database,
+  });
 
   // Versioned API.
   await fastify.register(publicRoutes, { ...routeDeps, prefix: '/api/v1' });
@@ -109,11 +115,13 @@ export function defaultDependencies(
   capabilities: Capabilities,
   store: ReadStore,
   log: Logger,
+  database: 'postgres' | 'memory' = 'memory',
 ): AppDependencies {
   return {
     config,
     capabilities,
     store,
+    database,
     challenges: new ChallengeStoreImpl(),
     sessions: new MemorySessionStore(),
     adminStore: new AdminStore(),

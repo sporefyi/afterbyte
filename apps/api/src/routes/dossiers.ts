@@ -48,7 +48,7 @@ export const dossierRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, deps
       limit?: number;
       cursor?: string;
     };
-    const { items, nextCursor } = store.listDossiers({
+    const { items, nextCursor } = await store.listDossiers({
       q: q.q,
       category: q.category,
       lifecycleStatus: q.lifecycleStatus,
@@ -63,7 +63,7 @@ export const dossierRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, deps
   fastify.get('/dossiers/:slug', async (request, reply) => {
     publicShort(reply, ttl);
     const { slug } = request.params as { slug: string };
-    const dossier = store.getDossier(slug);
+    const dossier = await store.getDossier(slug);
     if (!dossier) {
       return reply.status(404).send(failure('NOT_FOUND', `Dossier not found: ${slug}`, request.requestId));
     }
@@ -74,7 +74,7 @@ export const dossierRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, deps
     publicShort(reply, ttl);
     const { slug } = request.params as { slug: string };
     const { limit, cursor } = request.query as { limit?: number; cursor?: string };
-    const result = store.listVersions(slug, { limit: normalizeLimit(limit), cursor });
+    const result = await store.listVersions(slug, { limit: normalizeLimit(limit), cursor });
     if (!result) {
       return reply.status(404).send(failure('NOT_FOUND', `Dossier not found: ${slug}`, request.requestId));
     }
@@ -84,7 +84,7 @@ export const dossierRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, deps
   fastify.get('/dossiers/:slug/versions/:version', async (request, reply) => {
     immutable(reply);
     const { slug, version } = request.params as { slug: string; version: string };
-    const dossier = store.getVersion(slug, Number(version));
+    const dossier = await store.getVersion(slug, Number(version));
     if (!dossier) {
       return reply.status(404).send(failure('NOT_FOUND', `Version not found: ${slug} v${version}`, request.requestId));
     }
@@ -95,7 +95,7 @@ export const dossierRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, deps
   // depend on the ordinary response envelope (brief §12).
   fastify.get('/dossiers/:slug/versions/:version/canonical', async (request, reply) => {
     const { slug, version } = request.params as { slug: string; version: string };
-    const canon = store.getCanonical(slug, Number(version));
+    const canon = await store.getCanonical(slug, Number(version));
     if (!canon) {
       return reply.status(404).send(failure('NOT_FOUND', `Canonical bytes not found: ${slug} v${version}`, request.requestId));
     }
@@ -112,7 +112,10 @@ export const dossierRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, deps
 
   const subresource = (
     path: string,
-    list: (slug: string, page: { limit: number; cursor?: string }) => { items: unknown[]; nextCursor: string | null } | null,
+    list: (
+      slug: string,
+      page: { limit: number; cursor?: string },
+    ) => Promise<{ items: unknown[]; nextCursor: string | null } | null>,
   ) => {
     fastify.get(path, { schema: { querystring: pageQuerySchema } }, async (request, reply) => {
       publicShort(reply, ttl);
@@ -120,7 +123,7 @@ export const dossierRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, deps
       const { limit, cursor } = request.query as { limit?: number; cursor?: string };
       let result;
       try {
-        result = list(slug, { limit: normalizeLimit(limit), cursor });
+        result = await list(slug, { limit: normalizeLimit(limit), cursor });
       } catch (err) {
         if ((err as Error & { code?: string }).code === 'VALIDATION_FAILED') {
           return reply.status(422).send(failure('VALIDATION_FAILED', 'Invalid cursor', request.requestId));
@@ -134,17 +137,17 @@ export const dossierRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, deps
     });
   };
 
-  subresource('/dossiers/:slug/timeline', (s, p) => store.listTimeline(s, p));
-  subresource('/dossiers/:slug/sources', (s, p) => store.listSources(s, p));
-  subresource('/dossiers/:slug/metrics', (s, p) => store.listMetrics(s, p));
-  subresource('/dossiers/:slug/relations', (s, p) => store.listRelations(s, p));
+  subresource('/dossiers/:slug/timeline', async (s, p) => await store.listTimeline(s, p));
+  subresource('/dossiers/:slug/sources', async (s, p) => await store.listSources(s, p));
+  subresource('/dossiers/:slug/metrics', async (s, p) => await store.listMetrics(s, p));
+  subresource('/dossiers/:slug/relations', async (s, p) => await store.listRelations(s, p));
   // Editorial diffs across published versions. no-store: privileged-adjacent
   // content that must never populate a public cache.
   fastify.get('/dossiers/:slug/changes', { schema: { querystring: pageQuerySchema } }, async (request, reply) => {
     noStore(reply);
     const { slug } = request.params as { slug: string };
     const { limit, cursor } = request.query as { limit?: number; cursor?: string };
-    const result = store.listChanges(slug, { limit: normalizeLimit(limit), cursor });
+    const result = await store.listChanges(slug, { limit: normalizeLimit(limit), cursor });
     if (!result) {
       return reply.status(404).send(failure('NOT_FOUND', `Dossier not found: ${slug}`, request.requestId));
     }

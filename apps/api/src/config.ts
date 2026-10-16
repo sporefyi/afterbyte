@@ -38,7 +38,9 @@ export interface ApiConfig {
   publicSiteUrl: string;
   apiOrigin: string;
   allowedOrigins: string[];
-  databaseUrl: string;
+  /** Null when unset: the API falls back to the in-memory store (dev/test).
+   *  Required in production — loadConfig fails fast when APP_ENV=production. */
+  databaseUrl: string | null;
   redisUrl?: string;
   sessionSecret: string;
   sessionIdleMinutes: number;
@@ -97,7 +99,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): { config: ApiC
   const appEnv = appEnvRaw as AppEnv;
 
   const sessionSecret = req(env, 'SESSION_SECRET', missing);
-  const databaseUrl = req(env, 'DATABASE_URL', missing);
+  // DATABASE_URL is optional in dev/test (memory store fallback) but
+  // required in production: Render always injects it for the database.
+  const databaseUrl = opt(env, 'DATABASE_URL') ?? null;
+  if (!databaseUrl && appEnv === 'production') {
+    missing.push('DATABASE_URL (required in production; the in-memory store is dev/test only)');
+  }
   const redisUrl = opt(env, 'REDIS_URL');
   if (!redisUrl) {
     if (appEnv === 'production') {
@@ -182,7 +189,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): { config: ApiC
     publicSiteUrl: opt(env, 'PUBLIC_SITE_URL') ?? '',
     apiOrigin: opt(env, 'API_ORIGIN') ?? '',
     allowedOrigins,
-    databaseUrl: databaseUrl!,
+    databaseUrl,
     redisUrl,
     sessionSecret: sessionSecret!,
     sessionIdleMinutes: Number.parseInt(opt(env, 'SESSION_IDLE_MINUTES') ?? '30', 10),

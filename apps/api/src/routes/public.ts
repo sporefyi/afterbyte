@@ -27,17 +27,17 @@ export const publicRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, deps)
 
   fastify.get('/config', async (request, reply) => {
     publicShort(reply, ttl);
-    return success(store.getConfig(), { requestId: request.requestId, dataMode: dataModeOf(deps) });
+    return success(await store.getConfig(), { requestId: request.requestId, dataMode: dataModeOf(deps) });
   });
 
   fastify.get('/home', async (request, reply) => {
     publicShort(reply, ttl);
-    return success(store.getHome(), { requestId: request.requestId, dataMode: dataModeOf(deps) });
+    return success(await store.getHome(), { requestId: request.requestId, dataMode: dataModeOf(deps) });
   });
 
   fastify.get('/stats', async (request, reply) => {
     publicShort(reply, ttl);
-    return success(store.getStats(), { requestId: request.requestId, dataMode: dataModeOf(deps) });
+    return success(await store.getStats(), { requestId: request.requestId, dataMode: dataModeOf(deps) });
   });
 
   fastify.get(
@@ -57,7 +57,7 @@ export const publicRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, deps)
     async (request, reply) => {
       noStore(reply);
       const { q, limit } = request.query as { q: string; limit?: number };
-      const items = store.suggest(q, Math.min(limit ?? 10, 20));
+      const items = await store.suggest(q, Math.min(limit ?? 10, 20));
       return success(items, { requestId: request.requestId, dataMode: dataModeOf(deps) });
     },
   );
@@ -83,7 +83,7 @@ export const publicRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, deps)
         cursor?: string;
         eventType?: PublicEventType;
       };
-      const { items, nextCursor } = store.listActivity({ limit: normalizeLimit(limit), cursor }, eventType);
+      const { items, nextCursor } = await store.listActivity({ limit: normalizeLimit(limit), cursor }, eventType);
       return success(items, { requestId: request.requestId, dataMode: dataModeOf(deps), nextCursor });
     },
   );
@@ -91,7 +91,7 @@ export const publicRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, deps)
   fastify.get('/collections/:slug', async (request, reply) => {
     publicShort(reply, ttl);
     const { slug } = request.params as { slug: string };
-    const collection = store.getCollection(slug);
+    const collection = await store.getCollection(slug);
     if (!collection) {
       return reply.status(404).send(failure('NOT_FOUND', `Collection not found: ${slug}`, request.requestId));
     }
@@ -101,7 +101,7 @@ export const publicRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, deps)
   fastify.get('/receipts/:id', async (request, reply) => {
     publicShort(reply, ttl);
     const { id } = request.params as { id: string };
-    const receipt = store.getReceipt(id);
+    const receipt = await store.getReceipt(id);
     if (!receipt) {
       return reply.status(404).send(failure('NOT_FOUND', `Receipt not found: ${id}`, request.requestId));
     }
@@ -110,18 +110,18 @@ export const publicRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, deps)
 
   fastify.get('/methodology', async (request, reply) => {
     publicShort(reply, ttl);
-    return success(store.getMethodology(), { requestId: request.requestId, dataMode: dataModeOf(deps) });
+    return success(await store.getMethodology(), { requestId: request.requestId, dataMode: dataModeOf(deps) });
   });
 
   fastify.get('/status', async (request, reply) => {
     publicShort(reply, ttl);
-    return success(store.getStatus(), { requestId: request.requestId, dataMode: dataModeOf(deps) });
+    return success(await store.getStatus(), { requestId: request.requestId, dataMode: dataModeOf(deps) });
   });
 
   fastify.get('/share/dossiers/:slug/:version', async (request, reply) => {
     publicShort(reply, ttl);
     const { slug, version } = request.params as { slug: string; version: string };
-    const share = store.getShare(slug, Number(version));
+    const share = await store.getShare(slug, Number(version));
     if (!share) {
       return reply.status(404).send(failure('NOT_FOUND', `Share not found: ${slug} v${version}`, request.requestId));
     }
@@ -135,7 +135,7 @@ export const publicRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, deps)
     const lastEventId = (typeof headerId === 'string' ? headerId : undefined) ?? queryId;
 
     // Build the retained event list from the activity read model.
-    const { items } = store.listActivity({ limit: MAX_LIMIT });
+    const { items } = await store.listActivity({ limit: MAX_LIMIT });
     const events = items.map(toEventRecord);
     const cursor = resolveCursor(lastEventId, events);
 

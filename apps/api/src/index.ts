@@ -5,7 +5,11 @@
  */
 import { loadConfig, capabilitiesOf, ConfigError } from './config.js';
 import { buildApp, buildConfigPayload, defaultDependencies } from './app.js';
+import type { ReadStore } from './services/store.js';
 import { MemoryStore } from './services/memory-store.js';
+import { PostgresStore } from './services/postgres-store.js';
+import { createDb, runMigrations } from '@afterbyte/database';
+import { StorageClient } from '@afterbyte/storage';
 import { createLogger } from '@afterbyte/observability';
 
 async function main(): Promise<void> {
@@ -27,11 +31,30 @@ async function main(): Promise<void> {
   }
 
   const log = createLogger({ service: 'afterbyte-api' });
-  const store = new MemoryStore({
-    seedFixtures: config.useFixtureSeed,
-    config: buildConfigPayload(config, capabilities),
-  });
-  const deps = defaultDependencies(config, capabilities, store, log);
+  const configPayload = buildConfigPayload(config, capabilities);
+  const storage = config.objectStorage ? new StorageClient(config.objectStorage) : null;
+
+  // Postgres when DATABASE_URL is set (production); in-memory fallback for
+  // dev/test. Migrations run first unless RUN_MIGRATIONS=false.
+  let store: ReadStore;
+  let database: 'postgres' | 'memory';
+  let closeDb: (() => Promise<void>) | null = null;
+  if (config.databaseUrl) {
+    if ((process.env.RUN_MIGRATIONS ?? 'true').toLowerCase() !== 'false') {
+      log.info('running database migrations');
+      await runMigrations();
+    }
+    const { db, pool } = createDb(config.databaseUrl);
+    store = new PostgresStore(db, { config: configPayload, storage });
+    database = 'postgres';
+    closeDb = () => pool.end();
+    log.info('using postgres store (drizzle)');
+  } else {
+    store = new MemoryStore({ seedFixtures: config.useFixtureSeed, config: configPayload });
+    database = 'memory';
+    log.warn('DATABASE_URL not set — using in-memory store (dev/test fallback; not for production)');
+  }
+  const deps = defaultDependencies(config, capabilities, store, log, database);
   deps.challenges.startSweeper();
 
   const fastify = await buildApp(deps);
@@ -40,6 +63,7 @@ async function main(): Promise<void> {
     log.info({ signal }, 'shutting down');
     deps.challenges.stopSweeper();
     await fastify.close();
+    if (closeDb) await closeDb();
     process.exit(0);
   };
   process.on('SIGINT', () => void shutdown('SIGINT'));
@@ -50,6 +74,7 @@ async function main(): Promise<void> {
     {
       port: config.port,
       env: config.appEnv,
+      database,
       capabilities,
       fixtureMode: config.useFixtureSeed,
     },

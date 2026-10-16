@@ -96,13 +96,13 @@ export class MemoryStore implements ReadStore {
 
   // ---- public reads ----
 
-  getConfig(): ConfigPayload {
+  async getConfig(): Promise<ConfigPayload> {
     return this.opts.config;
   }
 
-  getHome(): HomePayload {
+  async getHome(): Promise<HomePayload> {
     const featured = [...this.dossiers.values()].slice(0, 4).map(toSummary);
-    const stats = this.getStats();
+    const stats = await this.getStats();
     return {
       editionId: '00000000-0000-4000-8000-000000000001',
       headline: 'The internet moves on. We follow up.',
@@ -114,7 +114,7 @@ export class MemoryStore implements ReadStore {
     };
   }
 
-  getStats(): StatsPayload {
+  async getStats(): Promise<StatsPayload> {
     const all = [...this.dossiers.values()];
     const byLifecycle = { active: 0, declining: 0, uncertain: 0, dormant: 0, defunct: 0 } as StatsPayload['byLifecycle'];
     const byCategory = { app: 0, website: 0, game: 0, meme: 0, community: 0, crypto: 0 } as StatsPayload['byCategory'];
@@ -137,7 +137,7 @@ export class MemoryStore implements ReadStore {
     };
   }
 
-  listDossiers(opts: ListDossiersOptions): { items: DossierSummary[]; nextCursor: string | null } {
+  async listDossiers(opts: ListDossiersOptions): Promise<{ items: DossierSummary[]; nextCursor: string | null }> {
     let rows = [...this.dossiers.values()].map(toSummary);
     if (opts.category) rows = rows.filter((r) => r.category === opts.category);
     if (opts.lifecycleStatus) rows = rows.filter((r) => r.lifecycleStatus === opts.lifecycleStatus);
@@ -163,11 +163,11 @@ export class MemoryStore implements ReadStore {
     return { items: [...res.items].reverse(), nextCursor: res.nextCursor };
   }
 
-  getDossier(slug: string): DossierDetail | null {
+  async getDossier(slug: string): Promise<DossierDetail | null> {
     return this.dossiers.get(slug) ?? null;
   }
 
-  listVersions(slug: string, input: PageInput) {
+  async listVersions(slug: string, input: PageInput) {
     const rows = this.versions.get(slug);
     if (!rows) return null;
     const sorted = [...rows].sort((a, b) => a.version - b.version);
@@ -175,7 +175,7 @@ export class MemoryStore implements ReadStore {
     return res;
   }
 
-  getVersion(slug: string, version: number): DossierDetail | null {
+  async getVersion(slug: string, version: number): Promise<DossierDetail | null> {
     const d = this.dossiers.get(slug);
     if (!d) return null;
     const v = (this.versions.get(slug) ?? []).find((x) => x.version === version);
@@ -183,50 +183,50 @@ export class MemoryStore implements ReadStore {
     return { ...d, version };
   }
 
-  getCanonical(slug: string, version: number): { bytes: Buffer; sha256: string } | null {
+  async getCanonical(slug: string, version: number): Promise<{ bytes: Buffer; sha256: string } | null> {
     return this.canonicals.get(`${slug}:v${version}`) ?? null;
   }
 
-  listTimeline(slug: string, input: PageInput) {
+  async listTimeline(slug: string, input: PageInput) {
     const rows = this.timelines.get(slug);
     if (!rows) return null;
     const sorted = [...rows].sort((a, b) => (a.occurredAt < b.occurredAt ? -1 : a.occurredAt > b.occurredAt ? 1 : a.id < b.id ? -1 : 1));
     return page(sorted, input, { slug }, (r) => r.id, (r) => r.occurredAt);
   }
 
-  listSources(slug: string, input: PageInput) {
+  async listSources(slug: string, input: PageInput) {
     const rows = this.sources.get(slug);
     if (!rows) return null;
     const sorted = [...rows].sort((a, b) => (a.addedAt < b.addedAt ? -1 : a.addedAt > b.addedAt ? 1 : a.id < b.id ? -1 : 1));
     return page(sorted, input, { slug }, (r) => r.id, (r) => r.addedAt);
   }
 
-  listMetrics(slug: string, input: PageInput) {
+  async listMetrics(slug: string, input: PageInput) {
     const rows = this.metrics.get(slug);
     if (!rows) return null;
     const sorted = [...rows].sort((a, b) => (a.observedAt < b.observedAt ? -1 : a.observedAt > b.observedAt ? 1 : a.id < b.id ? -1 : 1));
     return page(sorted, input, { slug }, (r) => r.id, (r) => r.observedAt);
   }
 
-  listRelations(slug: string, input: PageInput) {
+  async listRelations(slug: string, input: PageInput) {
     const rows = this.relations.get(slug);
     if (!rows) return null;
     const sorted = [...rows].sort((a, b) => (a.targetSlug < b.targetSlug ? -1 : a.targetSlug > b.targetSlug ? 1 : a.id < b.id ? -1 : 1));
     return page(sorted, input, { slug }, (r) => r.id, (r) => r.targetSlug);
   }
 
-  listChanges(slug: string, input: PageInput) {
+  async listChanges(slug: string, input: PageInput) {
     const rows = this.changes.get(slug);
     if (!rows) return null;
     const sorted = [...rows].sort((a, b) => (a.changedAt < b.changedAt ? -1 : a.changedAt > b.changedAt ? 1 : a.id < b.id ? -1 : 1));
     return page(sorted, input, { slug }, (r) => r.id, (r) => r.changedAt);
   }
 
-  getCollection(slug: string): CollectionDetail | null {
+  async getCollection(slug: string): Promise<CollectionDetail | null> {
     return this.collections.get(slug) ?? null;
   }
 
-  suggest(q: string, limit: number): SuggestItem[] {
+  async suggest(q: string, limit: number): Promise<SuggestItem[]> {
     const needle = q.toLowerCase();
     return [...this.dossiers.values()]
       .filter((d) => d.name.toLowerCase().includes(needle) || d.slug.includes(needle))
@@ -234,7 +234,7 @@ export class MemoryStore implements ReadStore {
       .map((d) => ({ slug: d.slug, name: d.name, category: d.category }));
   }
 
-  listActivity(input: PageInput, eventType?: PublicEventType) {
+  async listActivity(input: PageInput, eventType?: PublicEventType) {
     let rows = [...this.activity].sort((a, b) =>
       a.sequenceId < b.sequenceId ? -1 : a.sequenceId > b.sequenceId ? 1 : 0,
     );
@@ -242,19 +242,19 @@ export class MemoryStore implements ReadStore {
     return page(rows, input, { eventType: eventType ?? '' }, (r) => r.eventId, (r) => r.sequenceId.padStart(20, '0'));
   }
 
-  getReceipt(id: string): ReceiptDetail | null {
+  async getReceipt(id: string): Promise<ReceiptDetail | null> {
     return this.receipts.get(id) ?? null;
   }
 
-  getMethodology(): MethodologyPayload {
+  async getMethodology(): Promise<MethodologyPayload> {
     return this.methodology;
   }
 
-  getStatus(): StatusPayload {
+  async getStatus(): Promise<StatusPayload> {
     return { ...this.statusPayload, asOf: new Date().toISOString() };
   }
 
-  getShare(slug: string, version: number): SharePayload | null {
+  async getShare(slug: string, version: number): Promise<SharePayload | null> {
     const d = this.dossiers.get(slug);
     if (!d) return null;
     const v = (this.versions.get(slug) ?? []).find((x) => x.version === version);
@@ -270,7 +270,7 @@ export class MemoryStore implements ReadStore {
 
   // ---- personal ----
 
-  getOrCreateProfile(userId: string, address: string): MeProfile {
+  async getOrCreateProfile(userId: string, address: string): Promise<MeProfile> {
     let p = this.profiles.get(userId);
     if (!p) {
       p = { userId, address, roles: ['reader'], capabilities: [], createdAt: new Date().toISOString() };
@@ -288,53 +288,53 @@ export class MemoryStore implements ReadStore {
     return inner;
   }
 
-  listBookmarks(userId: string): BookmarkRecord[] {
+  async listBookmarks(userId: string): Promise<BookmarkRecord[]> {
     return [...this.userMap(this.bookmarks, userId).values()];
   }
-  putBookmark(userId: string, subjectId: string, dossierSlug: string): BookmarkRecord {
+  async putBookmark(userId: string, subjectId: string, dossierSlug: string): Promise<BookmarkRecord> {
     const rec = { subjectId, dossierSlug, createdAt: new Date().toISOString() };
     this.userMap(this.bookmarks, userId).set(subjectId, rec);
     return rec;
   }
-  deleteBookmark(userId: string, subjectId: string): boolean {
+  async deleteBookmark(userId: string, subjectId: string): Promise<boolean> {
     return this.userMap(this.bookmarks, userId).delete(subjectId);
   }
-  listWatchlist(userId: string): WatchlistRecord[] {
+  async listWatchlist(userId: string): Promise<WatchlistRecord[]> {
     return [...this.userMap(this.watchlist, userId).values()];
   }
-  putWatchlist(userId: string, subjectId: string, dossierSlug: string): WatchlistRecord {
+  async putWatchlist(userId: string, subjectId: string, dossierSlug: string): Promise<WatchlistRecord> {
     const rec = { subjectId, dossierSlug, createdAt: new Date().toISOString() };
     this.userMap(this.watchlist, userId).set(subjectId, rec);
     return rec;
   }
-  deleteWatchlist(userId: string, subjectId: string): boolean {
+  async deleteWatchlist(userId: string, subjectId: string): Promise<boolean> {
     return this.userMap(this.watchlist, userId).delete(subjectId);
   }
-  listNotifications(userId: string): NotificationRecord[] {
+  async listNotifications(userId: string): Promise<NotificationRecord[]> {
     return [...this.userMap(this.notifications, userId).values()];
   }
-  markNotificationRead(userId: string, id: string): NotificationRecord | null {
+  async markNotificationRead(userId: string, id: string): Promise<NotificationRecord | null> {
     const n = this.userMap(this.notifications, userId).get(id);
     if (!n) return null;
     n.read = true;
     return n;
   }
-  createSubmission(userId: string, input: { subjectName: string; candidateUrls: string[]; reason: string }): SubmissionTicket {
+  async createSubmission(userId: string, input: { subjectName: string; candidateUrls: string[]; reason: string }): Promise<SubmissionTicket> {
     const id = `sub-${++this.ticketSeq}`;
     const t: SubmissionTicket = { id, userId, status: 'open', createdAt: new Date().toISOString(), ...input };
     this.submissions.set(id, t);
     return t;
   }
-  createCorrection(userId: string, dossierSlug: string, input: { claimedIssue: string; evidenceUrls: string[]; explanatoryText: string }): CorrectionTicket {
+  async createCorrection(userId: string, dossierSlug: string, input: { claimedIssue: string; evidenceUrls: string[]; explanatoryText: string }): Promise<CorrectionTicket> {
     const id = `cor-${++this.ticketSeq}`;
     const t: CorrectionTicket = { id, userId, dossierSlug, status: 'open', createdAt: new Date().toISOString(), ...input };
     this.corrections.set(id, t);
     return t;
   }
-  listMySubmissions(userId: string): SubmissionTicket[] {
+  async listMySubmissions(userId: string): Promise<SubmissionTicket[]> {
     return [...this.submissions.values()].filter((s) => s.userId === userId);
   }
-  listMyOrders(_userId: string): unknown[] {
+  async listMyOrders(_userId: string): Promise<unknown[]> {
     return [];
   }
 

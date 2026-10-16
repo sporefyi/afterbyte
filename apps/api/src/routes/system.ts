@@ -6,6 +6,8 @@ import { noStore } from '../lib/cache.js';
 export interface SystemRouteOptions {
   config: ApiConfig;
   capabilities: Capabilities;
+  /** Honest database labeling for /health/ready. */
+  database: 'postgres' | 'memory';
 }
 
 /**
@@ -22,10 +24,11 @@ export const systemRoutes: FastifyPluginAsync<SystemRouteOptions> = async (fasti
     noStore(reply);
     // Readiness reflects ONLY needed deps. Database is required; Redis and
     // object storage are optional capabilities -> degraded, never not_ready.
-    // NOTE: the memory store stands in until the database lane lands; the
-    // check below becomes a real SELECT 1 then.
+    // The database label reports the actual backing store honestly.
     const checks: DependencyCheck[] = [
-      { name: 'database', status: 'ok', detail: 'memory store (drizzle backing pending)' },
+      deps.database === 'postgres'
+        ? { name: 'database', status: 'ok', detail: 'postgres (drizzle)' }
+        : { name: 'database', status: 'ok', detail: 'memory store (dev/test fallback; set DATABASE_URL for postgres)' },
       {
         name: 'redis',
         status: deps.config.redisUrl ? 'ok' : 'degraded',

@@ -13,8 +13,15 @@ describe('config', () => {
       loadConfig({} as NodeJS.ProcessEnv);
     } catch (err) {
       expect((err as ConfigError).message).toContain('SESSION_SECRET');
-      expect((err as ConfigError).message).toContain('DATABASE_URL');
     }
+  });
+
+  it('allows missing DATABASE_URL in dev (memory fallback), requires it in production', () => {
+    const { config } = loadConfig({ SESSION_SECRET: 'x'.repeat(40), APP_ENV: 'dev' } as NodeJS.ProcessEnv);
+    expect(config.databaseUrl).toBeNull();
+    expect(() =>
+      loadConfig({ SESSION_SECRET: 'x'.repeat(40), APP_ENV: 'production' } as NodeJS.ProcessEnv),
+    ).toThrow(/DATABASE_URL/);
   });
 
   it('rejects short session secrets and bad APP_ENV', () => {

@@ -145,7 +145,7 @@ export const identityRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, dep
         absoluteExpiry: nowMs + config.sessionAbsoluteHours * 3600 * 1000,
       };
       await sessions.create(session);
-      deps.store.getOrCreateProfile(userId, record.address);
+      await deps.store.getOrCreateProfile(userId, record.address);
 
       const csrfToken = newCsrfToken();
       reply.setCookie(SESSION_COOKIE, session.id, cookieOpts(deps, config.sessionAbsoluteHours * 3600));
@@ -174,7 +174,7 @@ export const identityRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, dep
 
   fastify.get('/me', { preHandler: [requireAuth()] }, async (request, reply) => {
     noStore(reply);
-    const profile = deps.store.getOrCreateProfile(request.session!.userId, request.session!.address);
+    const profile = await deps.store.getOrCreateProfile(request.session!.userId, request.session!.address);
     return success(
       { ...profile, roles: request.session!.roles, capabilities: request.session!.capabilities },
       { requestId: request.requestId },
@@ -184,7 +184,7 @@ export const identityRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, dep
   // ---- bookmarks ----
   fastify.get('/me/bookmarks', { preHandler: [requireAuth()] }, async (request, reply) => {
     noStore(reply);
-    return success(deps.store.listBookmarks(request.session!.userId), { requestId: request.requestId });
+    return success(await deps.store.listBookmarks(request.session!.userId), { requestId: request.requestId });
   });
   fastify.put(
     '/me/bookmarks/:subjectId',
@@ -202,7 +202,7 @@ export const identityRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, dep
       noStore(reply);
       const { subjectId } = request.params as { subjectId: string };
       const { dossierSlug } = request.body as { dossierSlug: string };
-      return success(deps.store.putBookmark(request.session!.userId, subjectId, dossierSlug), {
+      return success(await deps.store.putBookmark(request.session!.userId, subjectId, dossierSlug), {
         requestId: request.requestId,
       });
     },
@@ -210,7 +210,7 @@ export const identityRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, dep
   fastify.delete('/me/bookmarks/:subjectId', { preHandler: [requireAuth()] }, async (request, reply) => {
     noStore(reply);
     const { subjectId } = request.params as { subjectId: string };
-    const removed = deps.store.deleteBookmark(request.session!.userId, subjectId);
+    const removed = await deps.store.deleteBookmark(request.session!.userId, subjectId);
     if (!removed) return reply.status(404).send(failure('NOT_FOUND', 'Bookmark not found', request.requestId));
     return success({ removed: true }, { requestId: request.requestId });
   });
@@ -218,7 +218,7 @@ export const identityRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, dep
   // ---- watchlist ----
   fastify.get('/me/watchlist', { preHandler: [requireAuth()] }, async (request, reply) => {
     noStore(reply);
-    return success(deps.store.listWatchlist(request.session!.userId), { requestId: request.requestId });
+    return success(await deps.store.listWatchlist(request.session!.userId), { requestId: request.requestId });
   });
   fastify.put(
     '/me/watchlist/:subjectId',
@@ -236,7 +236,7 @@ export const identityRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, dep
       noStore(reply);
       const { subjectId } = request.params as { subjectId: string };
       const { dossierSlug } = request.body as { dossierSlug: string };
-      return success(deps.store.putWatchlist(request.session!.userId, subjectId, dossierSlug), {
+      return success(await deps.store.putWatchlist(request.session!.userId, subjectId, dossierSlug), {
         requestId: request.requestId,
       });
     },
@@ -244,7 +244,7 @@ export const identityRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, dep
   fastify.delete('/me/watchlist/:subjectId', { preHandler: [requireAuth()] }, async (request, reply) => {
     noStore(reply);
     const { subjectId } = request.params as { subjectId: string };
-    const removed = deps.store.deleteWatchlist(request.session!.userId, subjectId);
+    const removed = await deps.store.deleteWatchlist(request.session!.userId, subjectId);
     if (!removed) return reply.status(404).send(failure('NOT_FOUND', 'Watchlist entry not found', request.requestId));
     return success({ removed: true }, { requestId: request.requestId });
   });
@@ -252,7 +252,7 @@ export const identityRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, dep
   // ---- notifications (read state only; object-level ownership) ----
   fastify.get('/me/notifications', { preHandler: [requireAuth()] }, async (request, reply) => {
     noStore(reply);
-    return success(deps.store.listNotifications(request.session!.userId), { requestId: request.requestId });
+    return success(await deps.store.listNotifications(request.session!.userId), { requestId: request.requestId });
   });
   fastify.patch(
     '/me/notifications/:id',
@@ -263,9 +263,9 @@ export const identityRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, dep
     async (request, reply) => {
       noStore(reply);
       const { id } = request.params as { id: string };
-      const owned = deps.store.listNotifications(request.session!.userId).some((n) => n.id === id);
+      const owned = (await deps.store.listNotifications(request.session!.userId)).some((n) => n.id === id);
       if (!owned) return reply.status(404).send(failure('NOT_FOUND', 'Notification not found', request.requestId));
-      const updated = deps.store.markNotificationRead(request.session!.userId, id);
+      const updated = await deps.store.markNotificationRead(request.session!.userId, id);
       return success(updated, { requestId: request.requestId });
     },
   );
@@ -289,7 +289,7 @@ export const identityRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, dep
     },
     async (request, reply) => {
       noStore(reply);
-      const ticket = deps.store.createSubmission(
+      const ticket = await deps.store.createSubmission(
         request.session!.userId,
         request.body as { subjectName: string; candidateUrls: string[]; reason: string },
       );
@@ -316,10 +316,10 @@ export const identityRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, dep
     async (request, reply) => {
       noStore(reply);
       const { slug } = request.params as { slug: string };
-      if (!deps.store.getDossier(slug)) {
+      if (!await deps.store.getDossier(slug)) {
         return reply.status(404).send(failure('NOT_FOUND', `Dossier not found: ${slug}`, request.requestId));
       }
-      const ticket = deps.store.createCorrection(
+      const ticket = await deps.store.createCorrection(
         request.session!.userId,
         slug,
         request.body as { claimedIssue: string; evidenceUrls: string[]; explanatoryText: string },
@@ -330,11 +330,11 @@ export const identityRoutes: FastifyPluginAsync<RouteDeps> = async (fastify, dep
 
   fastify.get('/me/submissions', { preHandler: [requireAuth()] }, async (request, reply) => {
     noStore(reply);
-    return success(deps.store.listMySubmissions(request.session!.userId), { requestId: request.requestId });
+    return success(await deps.store.listMySubmissions(request.session!.userId), { requestId: request.requestId });
   });
 
   fastify.get('/me/orders', { preHandler: [requireAuth()] }, async (request, reply) => {
     noStore(reply);
-    return success(deps.store.listMyOrders(request.session!.userId), { requestId: request.requestId, dataMode: dataModeOf(deps) });
+    return success(await deps.store.listMyOrders(request.session!.userId), { requestId: request.requestId, dataMode: dataModeOf(deps) });
   });
 };
