@@ -26,6 +26,8 @@ export interface AppDependencies {
   store: ReadStore;
   /** Which read store backs the API: 'postgres' (production) or 'memory' (dev/test fallback). */
   database: 'postgres' | 'memory';
+  /** Migration failure message, if migrations were attempted and failed. Null when OK or not attempted. */
+  migrationError: string | null;
   challenges: ChallengeStore;
   sessions: SessionStore;
   adminStore: AdminStore;
@@ -98,6 +100,7 @@ export async function buildApp(deps: AppDependencies): Promise<FastifyInstance> 
     config: deps.config,
     capabilities: deps.capabilities,
     database: deps.database,
+    migrationError: deps.migrationError,
   });
 
   // Versioned API.
@@ -116,12 +119,14 @@ export function defaultDependencies(
   store: ReadStore,
   log: Logger,
   database: 'postgres' | 'memory' = 'memory',
+  migrationError: string | null = null,
 ): AppDependencies {
   return {
     config,
     capabilities,
     store,
     database,
+    migrationError,
     challenges: new ChallengeStoreImpl(),
     sessions: new MemorySessionStore(),
     adminStore: new AdminStore(),

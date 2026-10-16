@@ -8,6 +8,8 @@ export interface SystemRouteOptions {
   capabilities: Capabilities;
   /** Honest database labeling for /health/ready. */
   database: 'postgres' | 'memory';
+  /** Migration failure message, if migrations were attempted and failed. */
+  migrationError?: string | null;
 }
 
 /**
@@ -29,6 +31,9 @@ export const systemRoutes: FastifyPluginAsync<SystemRouteOptions> = async (fasti
       deps.database === 'postgres'
         ? { name: 'database', status: 'ok', detail: 'postgres (drizzle)' }
         : { name: 'database', status: 'ok', detail: 'memory store (dev/test fallback; set DATABASE_URL for postgres)' },
+      deps.migrationError
+        ? { name: 'migrations', status: 'degraded', detail: `FAILED: ${deps.migrationError}` }
+        : { name: 'migrations', status: 'ok', detail: deps.database === 'postgres' ? 'applied' : 'not attempted (memory store)' },
       {
         name: 'redis',
         status: deps.config.redisUrl ? 'ok' : 'degraded',

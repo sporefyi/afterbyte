@@ -38,11 +38,18 @@ async function main(): Promise<void> {
   // dev/test. Migrations run first unless RUN_MIGRATIONS=false.
   let store: ReadStore;
   let database: 'postgres' | 'memory';
+  let migrationError: string | null = null;
   let closeDb: (() => Promise<void>) | null = null;
   if (config.databaseUrl) {
     if ((process.env.RUN_MIGRATIONS ?? 'true').toLowerCase() !== 'false') {
       log.info('running database migrations');
-      await runMigrations();
+      try {
+        await runMigrations();
+        log.info('migrations applied');
+      } catch (err) {
+        migrationError = err instanceof Error ? err.message : String(err);
+        log.error({ err: migrationError }, 'database migrations FAILED — continuing without migrated schema');
+      }
     }
     const { db, pool } = createDb(config.databaseUrl);
     store = new PostgresStore(db, { config: configPayload, storage });
@@ -54,7 +61,7 @@ async function main(): Promise<void> {
     database = 'memory';
     log.warn('DATABASE_URL not set — using in-memory store (dev/test fallback; not for production)');
   }
-  const deps = defaultDependencies(config, capabilities, store, log, database);
+  const deps = defaultDependencies(config, capabilities, store, log, database, migrationError);
   deps.challenges.startSweeper();
 
   const fastify = await buildApp(deps);
