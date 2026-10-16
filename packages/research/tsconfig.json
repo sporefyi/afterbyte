@@ -1,0 +1,1 @@
+{"compilerOptions":{"outDir":"dist","rootDir":"src","types":["node"]},"exclude":["dist","tests"],"extends":"../../tsconfig.base.json","include":["src/**/*"]}

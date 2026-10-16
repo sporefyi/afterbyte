@@ -1,0 +1,212 @@
+/health/live:
+  get:
+    operationId: healthLive
+    tags:
+      - system
+    summary: Liveness probe
+    description: Kubernetes/container liveness probe. No envelope; never requires auth.
+    responses:
+      '200':
+        description: Process is alive
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                version:
+                  type: string
+/health/ready:
+  get:
+    operationId: healthReady
+    tags:
+      - system
+    summary: Readiness probe
+    description: Readiness reflects only the dependencies needed by the process. Optional capabilities report degraded, never not_ready.
+    responses:
+      '200':
+        description: Ready (or degraded)
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - ready
+                    - degraded
+                checks:
+                  type: array
+                  items:
+                    type: object
+
+/config:
+  get:
+    operationId: getConfig
+    tags:
+      - public
+    summary: Retrieve global API configuration
+    description: Returns the current API configuration, including feature flags and service metadata. Supports conditional requests via ETag.
+    parameters:
+      - $ref: '#/components/parameters/IfNoneMatch'
+    responses:
+      '200':
+        description: Configuration retrieved successfully
+        headers:
+          ETag:
+            schema:
+              type: string
+            description: Entity tag for caching
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/AppConfig'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '304':
+        description: Configuration unchanged since If-None-Match value
+/home:
+  get:
+    operationId: getHome
+    tags:
+      - public
+    summary: Retrieve home edition content
+    description: Returns curated home edition content. Supports conditional requests via ETag.
+    parameters:
+      - $ref: '#/components/parameters/IfNoneMatch'
+    responses:
+      '200':
+        description: Home edition retrieved successfully
+        headers:
+          ETag:
+            schema:
+              type: string
+            description: Entity tag for caching
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/HomeEdition'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '304':
+        description: Home edition unchanged since If-None-Match value
+/dossiers:
+  get:
+    operationId: listDossiers
+    tags:
+      - public
+    summary: Search and list dossiers
+    description: Returns a paginated list of dossier summaries. Supports full-text search via the q parameter. When q is provided and the search provider is unavailable, a 503 ProviderUnavailable error is returned. Note that no metric is referred to as "momentum" in this API.
+    parameters:
+      - name: q
+        in: query
+        schema:
+          type: string
+          maxLength: 200
+        description: Full-text search query
+      - name: category
+        in: query
+        schema:
+          type: string
+        description: Filter by category
+      - name: lifecycleStatus
+        in: query
+        schema:
+          type: string
+        description: Filter by lifecycle status
+      - name: era
+        in: query
+        schema:
+          type: string
+        description: Filter by era
+      - name: sort
+        in: query
+        schema:
+          type: string
+          enum:
+            - relevance
+            - recently_updated
+            - recently_verified
+          default: relevance
+        description: Sort order for results
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+    responses:
+      '200':
+        description: Dossiers retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/DossierSummary'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+      '429':
+        $ref: '#/components/responses/RateLimited'
+      '503':
+        $ref: '#/components/responses/ProviderUnavailable'
+/dossiers/{slug}:
+  get:
+    operationId: getDossier
+    tags:
+      - public
+    summary: Retrieve a dossier by slug
+    description: Returns the full detail of a single dossier. Supports conditional requests via ETag.
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+          maxLength: 200
+        description: Dossier slug identifier
+      - $ref: '#/components/parameters/IfNoneMatch'
+    responses:
+      '200':
+        description: Dossier retrieved successfully
+        headers:
+          ETag:
+            schema:
+              type: string
+            description: Entity tag for caching
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/DossierDetail'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '304':
+        description: Dossier unchanged since If-None-Match value
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'

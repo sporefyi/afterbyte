@@ -1,0 +1,588 @@
+/investigation-orders:
+  post:
+    operationId: createInvestigationOrder
+    tags:
+      - payments
+    summary: Create an investigation order
+    description: |
+      Payments are Release B behind the payments feature flag.
+      While PAYMENTS_ENABLED=false, this endpoint returns 503 FEATURE_UNAVAILABLE.
+      Submitting a request is free; a quote comes later.
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/InvestigationOrderCreate'
+    responses:
+      '201':
+        description: Investigation order created
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/InvestigationOrder'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+      '429':
+        $ref: '#/components/responses/RateLimited'
+      '503':
+        $ref: '#/components/responses/FeatureUnavailable'
+/investigation-orders/{id}:
+  get:
+    operationId: getInvestigationOrder
+    tags:
+      - payments
+    summary: Retrieve an investigation order
+    description: |
+      Payments are Release B behind the payments feature flag.
+      While PAYMENTS_ENABLED=false, this endpoint returns 503 FEATURE_UNAVAILABLE.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Investigation order ID
+    responses:
+      '200':
+        description: Investigation order retrieved
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/InvestigationOrder'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '503':
+        $ref: '#/components/responses/FeatureUnavailable'
+/investigation-orders/{id}/accept-quote:
+  post:
+    operationId: acceptQuote
+    tags:
+      - payments
+    summary: Accept a quote for an investigation order
+    description: |
+      Payments are Release B behind the payments feature flag.
+      While PAYMENTS_ENABLED=false, this endpoint returns 503 FEATURE_UNAVAILABLE.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Investigation order ID
+      - $ref: '#/components/parameters/IdempotencyKey'
+    responses:
+      '200':
+        description: Quote accepted
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/InvestigationOrder'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '409':
+        $ref: '#/components/responses/VersionConflict'
+      '503':
+        $ref: '#/components/responses/FeatureUnavailable'
+/payment-intents:
+  post:
+    operationId: createPaymentIntent
+    tags:
+      - payments
+    summary: Create a payment intent
+    description: |
+      Payments are Release B behind the payments feature flag.
+      While PAYMENTS_ENABLED=false, this endpoint returns 503 FEATURE_UNAVAILABLE.
+      Creates a single-use intent with exact integer amount, recipient and random reference.
+      One intent per quoted amount and bound payer.
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - orderId
+              - payerAddress
+              - asset
+            properties:
+              orderId:
+                type: string
+                format: uuid
+                description: Investigation order ID
+              payerAddress:
+                type: string
+                description: Payer blockchain address
+              asset:
+                type: string
+                description: Asset symbol (e.g. SOL)
+    responses:
+      '201':
+        description: Payment intent created
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/PaymentIntent'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '409':
+        $ref: '#/components/responses/VersionConflict'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+      '503':
+        $ref: '#/components/responses/FeatureUnavailable'
+/payment-intents/{id}:
+  get:
+    operationId: getPaymentIntent
+    tags:
+      - payments
+    summary: Retrieve a payment intent
+    description: |
+      Payments are Release B behind the payments feature flag.
+      While PAYMENTS_ENABLED=false, this endpoint returns 503 FEATURE_UNAVAILABLE.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Payment intent ID
+    responses:
+      '200':
+        description: Payment intent retrieved
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/PaymentIntent'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '503':
+        $ref: '#/components/responses/FeatureUnavailable'
+/payment-intents/{id}/submit-signature:
+  post:
+    operationId: submitPaymentSignature
+    tags:
+      - payments
+    summary: Submit a payment signature
+    description: |
+      Payments are Release B behind the payments feature flag.
+      While PAYMENTS_ENABLED=false, this endpoint returns 503 FEATURE_UNAVAILABLE.
+      The server verifies the transaction against a trusted configured RPC (finalized success, signers, reference, recipient, asset, amount, instruction path).
+      A claimed signature alone is not settlement; credit happens once under a DB uniqueness constraint.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Payment intent ID
+      - $ref: '#/components/parameters/IdempotencyKey'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SubmitSignatureRequest'
+    responses:
+      '202':
+        description: Signature submitted and verified
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/PaymentIntent'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '409':
+        $ref: '#/components/responses/PaymentNotFinalized'
+      '422':
+        $ref: '#/components/responses/PaymentMismatch'
+      '503':
+        $ref: '#/components/responses/FeatureUnavailable'
+/investigation-orders/{id}/refund-request:
+  post:
+    operationId: requestRefund
+    tags:
+      - payments
+    summary: Request a refund for an investigation order
+    description: |
+      Payments are Release B behind the payments feature flag.
+      While PAYMENTS_ENABLED=false, this endpoint returns 503 FEATURE_UNAVAILABLE.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Investigation order ID
+      - $ref: '#/components/parameters/IdempotencyKey'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RefundRequest'
+    responses:
+      '201':
+        description: Refund request created
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/Refund'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '409':
+        $ref: '#/components/responses/VersionConflict'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+      '503':
+        $ref: '#/components/responses/FeatureUnavailable'
+/refunds/{id}:
+  get:
+    operationId: getRefund
+    tags:
+      - payments
+    summary: Retrieve a refund
+    description: |
+      Payments are Release B behind the payments feature flag.
+      While PAYMENTS_ENABLED=false, this endpoint returns 503 FEATURE_UNAVAILABLE.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Refund ID
+    responses:
+      '200':
+        description: Refund retrieved
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/Refund'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '503':
+        $ref: '#/components/responses/FeatureUnavailable'
+/admin/investigation-orders/{id}/accept:
+  post:
+    operationId: adminAcceptOrder
+    tags:
+      - payments
+    summary: Accept an investigation order (admin)
+    description: |
+      Payments are Release B behind the payments feature flag.
+      While PAYMENTS_ENABLED=false, this endpoint returns 503 FEATURE_UNAVAILABLE.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Investigation order ID
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              note:
+                type: string
+                maxLength: 2000
+                description: Optional note
+    responses:
+      '200':
+        description: Investigation order accepted
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/InvestigationOrder'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '409':
+        $ref: '#/components/responses/VersionConflict'
+      '503':
+        $ref: '#/components/responses/FeatureUnavailable'
+/admin/investigation-orders/{id}/quote:
+  post:
+    operationId: adminCreateQuote
+    tags:
+      - payments
+    summary: Create a quote for an investigation order (admin)
+    description: |
+      Payments are Release B behind the payments feature flag.
+      While PAYMENTS_ENABLED=false, this endpoint returns 503 FEATURE_UNAVAILABLE.
+      Quote defines deliverable, asset, amount, expiry, delivery deadline, cancellation/refund terms and terms version.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Investigation order ID
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Quote'
+    responses:
+      '200':
+        description: Quote created
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/InvestigationOrder'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '409':
+        $ref: '#/components/responses/VersionConflict'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+      '503':
+        $ref: '#/components/responses/FeatureUnavailable'
+/admin/refunds/{id}/approve:
+  post:
+    operationId: adminApproveRefund
+    tags:
+      - payments
+    summary: Approve or reject a refund (admin)
+    description: |
+      Payments are Release B behind the payments feature flag.
+      While PAYMENTS_ENABLED=false, this endpoint returns 503 FEATURE_UNAVAILABLE.
+      Immutable audit entry; payout jobs use unique refund IDs and reconciliation before retries.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Refund ID
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - decision
+            properties:
+              decision:
+                type: string
+                enum:
+                  - approve
+                  - reject
+                description: Refund decision
+              note:
+                type: string
+                maxLength: 2000
+                description: Optional note
+    responses:
+      '200':
+        description: Refund decision recorded
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/Refund'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '409':
+        $ref: '#/components/responses/VersionConflict'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+      '503':
+        $ref: '#/components/responses/FeatureUnavailable'
+/admin/awards:
+  post:
+    operationId: adminCreateAward
+    tags:
+      - payments
+    summary: Create a contributor award (admin)
+    description: |
+      Payments are Release B behind the payments feature flag.
+      While PAYMENTS_ENABLED=false, this endpoint returns 503 FEATURE_UNAVAILABLE.
+      Contributor award; requires explicit capability and immutable audit entry.
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AwardCreate'
+    responses:
+      '201':
+        description: Award created
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/Award'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+      '503':
+        $ref: '#/components/responses/FeatureUnavailable'

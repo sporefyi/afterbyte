@@ -1,0 +1,24 @@
+{
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.1152.0"
+  },
+  "description": "AFTERBYTE storage — S3-compatible public/private buckets, versioned bundles, quarantine uploads.",
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "typescript": "5.7.3",
+    "vitest": "5.0.5"
+  },
+  "engines": {
+    "node": ">=20.18.0"
+  },
+  "main": "dist/index.js",
+  "name": "@afterbyte/storage",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "type": "module",
+  "types": "dist/index.d.ts",
+  "version": "0.1.0"
+}

@@ -1,0 +1,702 @@
+/admin/dossiers/{id}/retract:
+  post:
+    operationId: retractDossier
+    tags:
+      - admin
+    summary: Retract a dossier
+    description: Operational removal unlists the page and publishes a notice; already-public chain hashes cannot be erased. Requires admin:dossier:retract permission.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Dossier ID
+      - $ref: '#/components/parameters/IdempotencyKey'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RetractRequest'
+    responses:
+      '200':
+        description: Dossier retracted successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  type: object
+                  required:
+                    - id
+                    - slug
+                    - status
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    slug:
+                      type: string
+                    status:
+                      type: string
+                      enum:
+                        - retracted
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '409':
+        $ref: '#/components/responses/VersionConflict'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+/admin/dossiers/{id}/schedule-recheck:
+  post:
+    operationId: scheduleRecheck
+    tags:
+      - admin
+    summary: Schedule a recheck for a dossier
+    description: Enqueue a research run for the dossier. Requires admin:dossier:recheck permission.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Dossier ID
+    responses:
+      '202':
+        description: Recheck scheduled
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/ResearchRun'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '404':
+        $ref: '#/components/responses/NotFound'
+/admin/submissions:
+  get:
+    operationId: listAdminSubmissions
+    tags:
+      - admin
+    summary: List submissions
+    description: Retrieve submissions with optional status filter. Requires admin:submission:list permission.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum:
+            - received
+            - in_review
+            - accepted
+            - rejected
+        description: Filter by submission status
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+    responses:
+      '200':
+        description: Submissions retrieved
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Submission'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+/admin/submissions/{id}:
+  get:
+    operationId: getAdminSubmission
+    tags:
+      - admin
+    summary: Get a submission
+    description: Retrieve a single submission by ID. Requires admin:submission:read permission.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Submission ID
+    responses:
+      '200':
+        description: Submission retrieved
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/Submission'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '404':
+        $ref: '#/components/responses/NotFound'
+  patch:
+    operationId: moderateSubmission
+    tags:
+      - admin
+    summary: Moderate a submission
+    description: Apply a moderation decision to a submission. Requires admin:submission:moderate permission.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Submission ID
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ModerationDecision'
+    responses:
+      '200':
+        description: Submission moderated
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/Submission'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+/admin/corrections:
+  get:
+    operationId: listAdminCorrections
+    tags:
+      - admin
+    summary: List corrections
+    description: Retrieve corrections with optional status filter. Requires admin:correction:list permission.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum:
+            - received
+            - in_review
+            - accepted
+            - rejected
+        description: Filter by correction status
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+    responses:
+      '200':
+        description: Corrections retrieved
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Correction'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+/admin/corrections/{id}:
+  get:
+    operationId: getAdminCorrection
+    tags:
+      - admin
+    summary: Get a correction
+    description: Retrieve a single correction by ID. Requires admin:correction:read permission.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Correction ID
+    responses:
+      '200':
+        description: Correction retrieved
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/Correction'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '404':
+        $ref: '#/components/responses/NotFound'
+  patch:
+    operationId: moderateCorrection
+    tags:
+      - admin
+    summary: Moderate a correction
+    description: Apply a moderation decision to a correction. Requires admin:correction:moderate permission.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Correction ID
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ModerationDecision'
+    responses:
+      '200':
+        description: Correction moderated
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/Correction'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+/admin/home-editions/{id}:
+  get:
+    operationId: getHomeEdition
+    tags:
+      - admin
+    summary: Get a home edition
+    description: Retrieve a home edition by ID. Requires admin:home-edition:read permission.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Home edition ID
+    responses:
+      '200':
+        description: Home edition retrieved
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/HomeEditionAdmin'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '404':
+        $ref: '#/components/responses/NotFound'
+  patch:
+    operationId: patchHomeEdition
+    tags:
+      - admin
+    summary: Update a home edition
+    description: Patch a home edition configuration. Requires admin:home-edition:write permission.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Home edition ID
+      - $ref: '#/components/parameters/IfMatch'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/HomeEditionPatch'
+    responses:
+      '200':
+        description: Home edition updated
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/HomeEditionAdmin'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '409':
+        $ref: '#/components/responses/VersionConflict'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+/admin/providers:
+  get:
+    operationId: listProviders
+    tags:
+      - admin
+    summary: List provider statuses
+    description: Retrieve status of all external providers. Requires admin:provider:read permission.
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: Provider statuses retrieved
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ProviderStatus'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+/admin/costs:
+  get:
+    operationId: getCosts
+    tags:
+      - admin
+    summary: Get cost report
+    description: Retrieve cost report for a date range. Requires admin:cost:read permission.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: from
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date-time
+        description: Start of date range (RFC3339)
+      - name: to
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date-time
+        description: End of date range (RFC3339)
+    responses:
+      '200':
+        description: Cost report retrieved
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/CostReport'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+/admin/queues:
+  get:
+    operationId: getQueues
+    tags:
+      - admin
+    summary: Get queue health
+    description: Retrieve health status of all background queues. Requires admin:queue:read permission.
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: Queue health retrieved
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/QueueHealth'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+/admin/audit-log:
+  get:
+    operationId: listAuditLog
+    tags:
+      - admin
+    summary: List audit log entries
+    description: Retrieve audit log with optional filters. Requires admin:audit:read permission.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: actorId
+        in: query
+        schema:
+          type: string
+          format: uuid
+        description: Filter by actor ID
+      - name: action
+        in: query
+        schema:
+          type: string
+          maxLength: 100
+        description: Filter by action name
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+    responses:
+      '200':
+        description: Audit log entries retrieved
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/AuditLogEntry'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+/admin/receipts/failed:
+  get:
+    operationId: listFailedReceipts
+    tags:
+      - admin
+    summary: List failed receipts
+    description: Retrieve receipts with failed payment status. Requires admin:receipt:read permission.
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+    responses:
+      '200':
+        description: Failed receipts retrieved
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Receipt'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+/admin/assets/upload-intent:
+  post:
+    operationId: createUploadIntent
+    tags:
+      - admin
+    summary: Create upload intent
+    description: Create an upload intent for an asset. Size and type validation applied; uploads land quarantined. Requires admin:asset:upload permission.
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UploadIntentRequest'
+    responses:
+      '200':
+        description: Upload intent created
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/UploadIntent'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+/admin/assets/{id}/finalize:
+  post:
+    operationId: finalizeAsset
+    tags:
+      - admin
+    summary: Finalize an asset
+    description: Move an asset from quarantine to finalized state. Requires admin:asset:finalize permission.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Asset ID
+    responses:
+      '200':
+        description: Asset finalized
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/Asset'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '409':
+        $ref: '#/components/responses/VersionConflict'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'

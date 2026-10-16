@@ -1,0 +1,36 @@
+{
+  "dependencies": {
+    "@afterbyte/research": "workspace:*",
+    "@afterbyte/solana": "workspace:*",
+    "@afterbyte/storage": "workspace:*",
+    "@solana/web3.js": "1.95.8",
+    "bullmq": "5.81.5",
+    "ioredis": "5.11.1",
+    "pg": "8.23.1"
+  },
+  "description": "AFTERBYTE BullMQ job-processing runtime: research pipeline, publication, receipt anchoring/reconciliation, read models.",
+  "devDependencies": {
+    "@types/ioredis-mock": "8.2.8",
+    "@types/node": "24.19.2",
+    "@types/pg": "8.23.1",
+    "ioredis-mock": "8.13.1",
+    "typescript": "5.7.3",
+    "vitest": "5.0.5"
+  },
+  "engines": {
+    "node": ">=20.18.0"
+  },
+  "main": "dist/src/index.js",
+  "name": "@afterbyte/worker",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json && node --watch dist/src/index.js",
+    "start": "node dist/src/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "type": "module",
+  "version": "0.1.0"
+}

@@ -1,0 +1,121 @@
+/dossiers/{slug}/versions:
+  get:
+    operationId: listDossierVersions
+    tags:
+      - public
+    summary: List all versions of a dossier
+    description: Retrieve public version summaries for a dossier, ordered newest first. Each summary includes correction and retraction labels where applicable.
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Dossier slug identifier
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+    responses:
+      '200':
+        description: Version summaries retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/VersionSummary'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+/dossiers/{slug}/versions/{version}:
+  get:
+    operationId: getDossierVersion
+    tags:
+      - public
+    summary: Retrieve a specific dossier version
+    description: Fetch immutable content and current receipt metadata for a specific version. Supports conditional requests via ETag.
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Dossier slug identifier
+      - name: version
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+        description: Version number (1-indexed)
+      - $ref: '#/components/parameters/IfNoneMatch'
+    responses:
+      '200':
+        description: Version detail retrieved successfully
+        headers:
+          ETag:
+            schema:
+              type: string
+            description: Entity tag for caching
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/VersionDetail'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '304':
+        description: Not modified
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+/dossiers/{slug}/versions/{version}/canonical:
+  get:
+    operationId: getDossierVersionCanonical
+    tags:
+      - public
+    summary: Retrieve canonical bytes for a version
+    description: Returns the exact immutable canonical bytes for a specific version as application/octet-stream. Hash verification must be performed against these raw bytes independent of any JSON response envelope. Suitable for long-term caching with Cache-Control headers.
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Dossier slug identifier
+      - name: version
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+        description: Version number (1-indexed)
+    responses:
+      '200':
+        description: Canonical bytes returned successfully
+        headers:
+          ETag:
+            schema:
+              type: string
+            description: Entity tag for caching
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      '404':
+        $ref: '#/components/responses/NotFound'

@@ -1,0 +1,28 @@
+{
+  "description": "AFTERBYTE research: source ingestion, bounded research pipeline, editorial policy.",
+  "devDependencies": {
+    "typescript": "5.7.3",
+    "vitest": "3.2.4",
+    "@types/node": "22.10.2"
+  },
+  "engines": {
+    "node": ">=20.18.0"
+  },
+  "exports": {
+    ".": {
+      "default": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "main": "./dist/index.js",
+  "name": "@afterbyte/research",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && cp -r policy prompts dist/",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "type": "module",
+  "types": "./dist/index.d.ts",
+  "version": "0.1.0"
+}

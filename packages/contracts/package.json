@@ -1,0 +1,37 @@
+{
+  "description": "AFTERBYTE v1 API contract: checked-in OpenAPI 3.1 (source of truth), generated TypeScript types, typed fetch client, fixtures, contract tests.",
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "openapi-typescript": "7.13.0",
+    "typescript": "5.7.3",
+    "vitest": "5.0.5",
+    "yaml": "2.9.1"
+  },
+  "engines": {
+    "node": ">=20.18.0"
+  },
+  "exports": {
+    ".": "./dist/client.js",
+    "./types": "./dist/types.js"
+  },
+  "files": [
+    "dist",
+    "openapi/v1.yaml",
+    "fixtures"
+  ],
+  "main": "./dist/client.js",
+  "name": "@afterbyte/contracts",
+  "scripts": {
+    "build": "pnpm openapi:assemble && pnpm gen:types && tsc -p tsconfig.build.json",
+    "gen:types": "openapi-typescript openapi/v1.yaml --output src/types.ts",
+    "lint": "node scripts/lint-openapi.mjs",
+    "openapi:assemble": "node scripts/assemble-openapi.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "type": "module",
+  "types": "./dist/client.d.ts",
+  "version": "0.1.0"
+}

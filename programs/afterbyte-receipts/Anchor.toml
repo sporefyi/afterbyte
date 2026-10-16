@@ -1,0 +1,33 @@
+# AFTERBYTE receipt program — Anchor workspace config.
+#
+# PROGRAM IDS ARE NOT SET: this repo has no deployment. Before `anchor deploy`,
+# generate a keypair (`solana-keygen new -o target/deploy/afterbyte_receipts-keypair.json`),
+# put its pubkey in `declare_id!` (src/lib.rs) and in the [programs.*] sections
+# below, and record everything in deploy/manifest.TEMPLATE.json (real values only
+# after an actual deployment). Never invent a program id.
+
+[toolchain]
+# Pinned Anchor CLI. Install via: avm install 0.30.1 && avm use 0.30.1
+anchor_version = "0.30.1"
+
+[features]
+seeds = false
+skip-lint = false
+
+# Uncomment and fill with the REAL program id after keypair generation.
+# [programs.localnet]
+# afterbyte_receipts = "<REAL_PROGRAM_ID>"
+# [programs.devnet]
+# afterbyte_receipts = "<REAL_PROGRAM_ID>"
+# [programs.mainnet]
+# afterbyte_receipts = "<REAL_PROGRAM_ID>"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

@@ -1,0 +1,454 @@
+    # ------------------------------------------------------------------
+    # Identity
+    AuthChallengeRequest:
+      type: object
+      required: [walletAddress, chain]
+      properties:
+        walletAddress: { type: string, minLength: 32, maxLength: 64 }
+        chain: { type: string, enum: [solana] }
+    AuthChallengeResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: object
+          required: [challenge, message, expiresAt]
+          properties:
+            challenge: { type: string }
+            message: { type: string, description: Exact message to sign. }
+            expiresAt: { $ref: '#/components/schemas/IsoDateTime' }
+        meta: { $ref: '#/components/schemas/ResponseMeta' }
+    AuthVerifyRequest:
+      type: object
+      required: [walletAddress, challenge, signature]
+      properties:
+        walletAddress: { type: string, minLength: 32, maxLength: 64 }
+        challenge: { type: string }
+        signature: { type: string }
+    AuthToken:
+      type: object
+      required: [tokenType, accessToken, expiresAt, user]
+      properties:
+        tokenType: { type: string, enum: [Bearer] }
+        accessToken: { type: string }
+        expiresAt: { $ref: '#/components/schemas/IsoDateTime' }
+        user: { $ref: '#/components/schemas/User' }
+    User:
+      type: object
+      required: [id, walletAddress, createdAt]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        walletAddress: { type: string }
+        displayName: { type: ['string', 'null'], maxLength: 60 }
+        createdAt: { $ref: '#/components/schemas/IsoDateTime' }
+    Bookmark:
+      type: object
+      required: [subjectId, createdAt]
+      properties:
+        subjectId: { $ref: '#/components/schemas/Uuid' }
+        createdAt: { $ref: '#/components/schemas/IsoDateTime' }
+    WatchlistItem:
+      type: object
+      required: [subjectId, createdAt]
+      properties:
+        subjectId: { $ref: '#/components/schemas/Uuid' }
+        note: { type: ['string', 'null'], maxLength: 280 }
+        createdAt: { $ref: '#/components/schemas/IsoDateTime' }
+    Notification:
+      type: object
+      required: [id, type, title, createdAt]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        type: { type: string, example: dossier.corrected }
+        title: { type: string }
+        body: { type: ['string', 'null'] }
+        readAt: { $ref: '#/components/schemas/IsoDateTime' }
+        createdAt: { $ref: '#/components/schemas/IsoDateTime' }
+    NotificationReadUpdate:
+      type: object
+      required: [read]
+      properties:
+        read: { type: boolean, description: Read state only; no other fields. }
+    Submission:
+      type: object
+      required: [id, subjectName, candidateUrls, reason, status, createdAt]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        subjectName: { type: string, maxLength: 200 }
+        candidateUrls:
+          type: array
+          maxItems: 10
+          items: { type: string, format: uri, maxLength: 2000 }
+        reason: { type: string, maxLength: 2000 }
+        status:
+          type: string
+          enum: [received, in_review, accepted, rejected]
+        ticketNumber: { type: string }
+        createdAt: { $ref: '#/components/schemas/IsoDateTime' }
+    SubmissionCreate:
+      type: object
+      required: [subjectName, candidateUrls, reason]
+      properties:
+        subjectName: { type: string, minLength: 2, maxLength: 200 }
+        candidateUrls:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items: { type: string, format: uri, maxLength: 2000 }
+        reason: { type: string, minLength: 10, maxLength: 2000 }
+    Correction:
+      type: object
+      required: [id, dossierSlug, issue, evidenceUrls, text, status, createdAt]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        dossierSlug: { type: string }
+        issue: { type: string, maxLength: 500 }
+        evidenceUrls:
+          type: array
+          maxItems: 10
+          items: { type: string, format: uri, maxLength: 2000 }
+        text: { type: string, maxLength: 5000 }
+        status:
+          type: string
+          enum: [received, in_review, accepted, rejected]
+        createdAt: { $ref: '#/components/schemas/IsoDateTime' }
+    CorrectionCreate:
+      type: object
+      required: [issue, evidenceUrls, text]
+      properties:
+        issue: { type: string, minLength: 10, maxLength: 500 }
+        evidenceUrls:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items: { type: string, format: uri, maxLength: 2000 }
+        text: { type: string, minLength: 10, maxLength: 5000 }
+    # ------------------------------------------------------------------
+    # Admin: research, drafts, moderation
+    ResearchRun:
+      type: object
+      required: [id, kind, status, createdAt]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        kind: { type: string, example: discovery }
+        subjectId: { $ref: '#/components/schemas/Uuid' }
+        status:
+          type: string
+          enum:
+            [queued, awaiting_provider, running, succeeded, failed, cancelled]
+        startedAt: { $ref: '#/components/schemas/IsoDateTime' }
+        finishedAt: { $ref: '#/components/schemas/IsoDateTime' }
+        costUsd:
+          type: ['string', 'null']
+          description: Decimal as a string; never a float.
+        error: { type: ['string', 'null'] }
+        createdAt: { $ref: '#/components/schemas/IsoDateTime' }
+    ResearchRunCreate:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum: [discovery, refresh, recheck]
+        subjectId: { $ref: '#/components/schemas/Uuid' }
+        subjectName: { type: string, maxLength: 200 }
+    Draft:
+      type: object
+      required: [id, subjectId, revision, status, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        subjectId: { $ref: '#/components/schemas/Uuid' }
+        revision: { type: integer, minimum: 1 }
+        status:
+          type: string
+          enum: [draft, in_review, approved, published, rejected]
+        content:
+          type: object
+          additionalProperties: true
+          description: Draft working content; only published versions are immutable.
+        reviewNotes: { type: ['string', 'null'] }
+        updatedAt: { $ref: '#/components/schemas/IsoDateTime' }
+        updatedBy: { $ref: '#/components/schemas/Uuid' }
+    DraftPatch:
+      type: object
+      required: [expectedRevision]
+      properties:
+        expectedRevision:
+          type: integer
+          minimum: 1
+          description: |-
+            Optimistic concurrency: must equal the current revision or the
+            update fails with 409 VERSION_CONFLICT.
+        content:
+          type: object
+          additionalProperties: true
+        reviewNotes: { type: ['string', 'null'] }
+    PublishRequest:
+      type: object
+      required: [expectedRevision, intendedPublishedAt]
+      properties:
+        expectedRevision: { type: integer, minimum: 1 }
+        intendedPublishedAt:
+          $ref: '#/components/schemas/IsoDateTime'
+          description: Fixed before hashing; recorded in the canonical payload.
+    ModerationDecision:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [approve, reject, request_changes]
+        note: { type: string, maxLength: 2000 }
+    RetractRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 10, maxLength: 2000 }
+        expectedRevision: { type: integer, minimum: 1 }
+      description: |-
+        Operational removal unlists the page and publishes a notice; already-
+        public chain hashes cannot be erased and this is disclosed to the admin.
+    HomeEditionAdmin:
+      type: object
+      required: [id, status, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        status:
+          type: string
+          enum: [scheduled, live, archived]
+        publishAt: { $ref: '#/components/schemas/IsoDateTime' }
+        headline: { type: string }
+        featuredSubjectIds:
+          type: array
+          items: { $ref: '#/components/schemas/Uuid' }
+        updatedAt: { $ref: '#/components/schemas/IsoDateTime' }
+    HomeEditionPatch:
+      type: object
+      required: [expectedRevision]
+      properties:
+        expectedRevision: { type: integer, minimum: 1 }
+        status: { type: string, enum: [scheduled, live, archived] }
+        publishAt: { $ref: '#/components/schemas/IsoDateTime' }
+        headline: { type: string, maxLength: 200 }
+        featuredSubjectIds:
+          type: array
+          maxItems: 12
+          items: { $ref: '#/components/schemas/Uuid' }
+    QueueHealth:
+      type: object
+      required: [name, waiting, active, delayed, failed]
+      properties:
+        name: { type: string }
+        waiting: { type: integer, minimum: 0 }
+        active: { type: integer, minimum: 0 }
+        delayed: { type: integer, minimum: 0 }
+        failed: { type: integer, minimum: 0 }
+        paused: { type: boolean }
+    CostReport:
+      type: object
+      required: [periodStart, periodEnd, totalUsd, byProvider, circuitBreaker]
+      properties:
+        periodStart: { $ref: '#/components/schemas/IsoDateTime' }
+        periodEnd: { $ref: '#/components/schemas/IsoDateTime' }
+        totalUsd: { type: string, description: Decimal as a string. }
+        budgetUsd: { type: ['string', 'null'] }
+        byProvider:
+          type: array
+          items:
+            type: object
+            required: [providerId, costUsd]
+            properties:
+              providerId: { type: string }
+              costUsd: { type: string }
+        circuitBreaker:
+          type: object
+          required: [state]
+          properties:
+            state: { type: string, enum: [closed, open, half_open] }
+            openedAt: { $ref: '#/components/schemas/IsoDateTime' }
+            reason: { type: string }
+    AuditLogEntry:
+      type: object
+      required: [id, actorId, action, targetType, targetId, at]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        actorId: { $ref: '#/components/schemas/Uuid' }
+        action: { type: string, example: draft.approve }
+        targetType: { type: string, example: draft }
+        targetId: { type: string }
+        at: { $ref: '#/components/schemas/IsoDateTime' }
+        metadata:
+          type: object
+          additionalProperties: true
+    Asset:
+      type: object
+      required: [id, kind, status, createdAt]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        kind: { type: string, enum: [image, document] }
+        status:
+          type: string
+          enum: [pending_upload, quarantined, approved, rejected]
+        url: { type: ['string', 'null'], format: uri }
+        sizeBytes: { type: ['integer', 'null'], minimum: 0 }
+        contentType: { type: ['string', 'null'] }
+        alt: { type: ['string', 'null'] }
+        createdAt: { $ref: '#/components/schemas/IsoDateTime' }
+    UploadIntentRequest:
+      type: object
+      required: [kind, contentType, sizeBytes]
+      properties:
+        kind: { type: string, enum: [image, document] }
+        contentType: { type: string, maxLength: 127 }
+        sizeBytes: { type: integer, minimum: 1, maximum: 52428800 }
+        alt: { type: string, maxLength: 300 }
+    UploadIntent:
+      type: object
+      required: [assetId, uploadUrl, expiresAt]
+      properties:
+        assetId: { $ref: '#/components/schemas/Uuid' }
+        uploadUrl: { type: string, format: uri }
+        expiresAt: { $ref: '#/components/schemas/IsoDateTime' }
+        requiredHeaders:
+          type: object
+          additionalProperties: { type: string }
+    # ------------------------------------------------------------------
+    # Payments (Release B, feature-flagged OFF in v1)
+    OrderStatus:
+      type: string
+      enum:
+        - submitted
+        - accepted
+        - quoted
+        - quote_accepted
+        - funded
+        - fulfilled
+        - cancelled
+        - refund_requested
+        - refunded
+    Quote:
+      type: object
+      required:
+        - deliverable
+        - asset
+        - amount
+        - expiry
+        - deliveryDeadline
+        - cancellationTerms
+        - termsVersion
+      properties:
+        deliverable: { type: string }
+        asset: { type: string, example: SOL }
+        amount:
+          type: string
+          pattern: '^[0-9]+$'
+          description: Exact integer amount in base units (lamports / base units).
+        expiry: { $ref: '#/components/schemas/IsoDateTime' }
+        deliveryDeadline: { $ref: '#/components/schemas/IsoDateTime' }
+        cancellationTerms: { type: string }
+        refundTerms: { type: string }
+        termsVersion: { type: string }
+    InvestigationOrder:
+      type: object
+      required: [id, subjectName, status, createdAt]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        subjectName: { type: string }
+        status: { $ref: '#/components/schemas/OrderStatus' }
+        quote: { $ref: '#/components/schemas/Quote' }
+        paymentIntentId: { $ref: '#/components/schemas/Uuid' }
+        createdAt: { $ref: '#/components/schemas/IsoDateTime' }
+    InvestigationOrderCreate:
+      type: object
+      required: [subjectName, scope]
+      properties:
+        subjectName: { type: string, minLength: 2, maxLength: 200 }
+        scope: { type: string, minLength: 20, maxLength: 5000 }
+        candidateUrls:
+          type: array
+          maxItems: 10
+          items: { type: string, format: uri, maxLength: 2000 }
+    PaymentIntentStatus:
+      type: string
+      enum: [created, submitted, finalized, mismatched, expired, cancelled]
+    PaymentIntent:
+      type: object
+      required:
+        - id
+        - orderId
+        - payerAddress
+        - chain
+        - asset
+        - recipient
+        - amount
+        - reference
+        - status
+        - expiresAt
+        - createdAt
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        orderId: { $ref: '#/components/schemas/Uuid' }
+        payerAddress: { type: string }
+        chain: { type: string, enum: [solana] }
+        asset: { type: string, example: SOL }
+        mint: { type: ['string', 'null'], description: Allowlisted mint for SPL assets. }
+        recipient: { type: string }
+        amount:
+          type: string
+          pattern: '^[0-9]+$'
+          description: Exact integer amount in base units.
+        reference: { type: string }
+        status: { $ref: '#/components/schemas/PaymentIntentStatus' }
+        txSignature: { type: ['string', 'null'] }
+        instructions:
+          type: ['string', 'null']
+          description: Human-readable transaction instructions for the wallet.
+        expiresAt: { $ref: '#/components/schemas/IsoDateTime' }
+        createdAt: { $ref: '#/components/schemas/IsoDateTime' }
+    SubmitSignatureRequest:
+      type: object
+      required: [txSignature]
+      properties:
+        txSignature: { type: string, minLength: 64, maxLength: 128 }
+      description: |-
+        The server verifies the transaction against a trusted configured RPC
+        (finalized success, signers, reference, recipient, asset, amount,
+        instruction path). A claimed signature alone is not settlement.
+    Refund:
+      type: object
+      required: [id, orderId, amount, status, reason, createdAt]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        orderId: { $ref: '#/components/schemas/Uuid' }
+        amount: { type: string, pattern: '^[0-9]+$' }
+        status:
+          type: string
+          enum: [requested, approved, rejected, executed]
+        reason: { type: string }
+        createdAt: { $ref: '#/components/schemas/IsoDateTime' }
+    RefundRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 10, maxLength: 2000 }
+    Award:
+      type: object
+      required: [id, recipient, amount, asset, status, reason, createdAt]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        recipient: { type: string }
+        amount: { type: string, pattern: '^[0-9]+$' }
+        asset: { type: string }
+        status:
+          type: string
+          enum: [proposed, approved, executed, rejected]
+        reason: { type: string }
+        createdAt: { $ref: '#/components/schemas/IsoDateTime' }
+    AwardCreate:
+      type: object
+      required: [recipient, amount, asset, reason]
+      properties:
+        recipient: { type: string, minLength: 32, maxLength: 64 }
+        amount: { type: string, pattern: '^[0-9]+$' }
+        asset: { type: string }
+        reason: { type: string, minLength: 10, maxLength: 2000 }

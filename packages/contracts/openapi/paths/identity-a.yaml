@@ -1,0 +1,135 @@
+/auth/challenge:
+  post:
+    operationId: postAuthChallenge
+    tags:
+      - identity
+    summary: Start a wallet sign-in challenge
+    description: Initiates a Solana wallet sign-in challenge. Returns a message to be signed by the client.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthChallengeRequest'
+    responses:
+      '200':
+        description: Challenge created successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  type: object
+                  required:
+                    - challenge
+                    - message
+                    - expiresAt
+                  properties:
+                    challenge:
+                      type: string
+                    message:
+                      type: string
+                      description: The exact message to be signed by the wallet
+                    expiresAt:
+                      $ref: '#/components/schemas/IsoDateTime'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+      '429':
+        $ref: '#/components/responses/RateLimited'
+/auth/verify:
+  post:
+    operationId: postAuthVerify
+    tags:
+      - identity
+    summary: Verify a signed challenge
+    description: Verifies the signed challenge and issues an authentication token.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthVerifyRequest'
+    responses:
+      '200':
+        description: Challenge verified successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/AuthToken'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+      '429':
+        $ref: '#/components/responses/RateLimited'
+/auth/logout:
+  post:
+    operationId: postAuthLogout
+    tags:
+      - identity
+    summary: Revoke the current authentication token
+    description: Revokes the current bearer token, logging out the user.
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: Token revoked successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  type: object
+                  required:
+                    - revoked
+                  properties:
+                    revoked:
+                      type: boolean
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+/me:
+  get:
+    operationId: getMe
+    tags:
+      - identity
+    summary: Get the current authenticated user
+    description: Returns the profile of the currently authenticated user.
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: Current user retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/User'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'

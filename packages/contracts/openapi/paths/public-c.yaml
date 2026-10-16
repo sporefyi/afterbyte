@@ -1,0 +1,184 @@
+/dossiers/{slug}/timeline:
+  get:
+    operationId: getDossierTimeline
+    tags:
+      - public
+    summary: Retrieve published timeline events for a dossier
+    description: Returns chronologically ordered published events with date precision and evidence references.
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+          maxLength: 200
+        description: Dossier slug identifier
+    responses:
+      '200':
+        description: Timeline events retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/TimelineEvent'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '404':
+        $ref: '#/components/responses/NotFound'
+/dossiers/{slug}/sources:
+  get:
+    operationId: getDossierSources
+    tags:
+      - public
+    summary: Retrieve public sources for a dossier
+    description: Returns public metadata and approved excerpts only. Private snapshots are never exposed.
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+          maxLength: 200
+        description: Dossier slug identifier
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+    responses:
+      '200':
+        description: Sources retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/SourceRecord'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+/dossiers/{slug}/metrics:
+  get:
+    operationId: getDossierMetrics
+    tags:
+      - public
+    summary: Retrieve metric observations for a dossier
+    description: Returns actual observations with units, provenance and coverage intervals. Missing intervals are never backfilled.
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+          maxLength: 200
+        description: Dossier slug identifier
+    responses:
+      '200':
+        description: Metrics retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/MetricObservation'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '404':
+        $ref: '#/components/responses/NotFound'
+/dossiers/{slug}/relations:
+  get:
+    operationId: getDossierRelations
+    tags:
+      - public
+    summary: Retrieve published relationship graph for a dossier
+    description: Returns bounded published relationships. Optionally filter to relations supporting a specific claim.
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+          maxLength: 200
+        description: Dossier slug identifier
+      - name: claimId
+        in: query
+        required: false
+        schema:
+          type: string
+        description: Filter relations to those supporting this claim identifier
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+    responses:
+      '200':
+        description: Relations retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Relation'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+/dossiers/{slug}/changes:
+  get:
+    operationId: getDossierChanges
+    tags:
+      - public
+    summary: Retrieve editorial changes across published versions
+    description: Returns editorial diffs and explanations across published versions, newest first.
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+          maxLength: 200
+        description: Dossier slug identifier
+    responses:
+      '200':
+        description: Changes retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ChangeEntry'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '404':
+        $ref: '#/components/responses/NotFound'

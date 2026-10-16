@@ -1,0 +1,21 @@
+[package]
+name = "afterbyte-receipts"
+version = "0.1.0"
+description = "AFTERBYTE receipt program: append-only publication hash commitments. No custody, no token, no transfers."
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "afterbyte_receipts"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build"]
+
+[dependencies]
+# Pinned: Anchor 0.30.1 (pairs with Solana 1.18.x / Rust >= 1.75).
+anchor-lang = "=0.30.1"

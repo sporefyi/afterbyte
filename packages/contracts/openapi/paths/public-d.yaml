@@ -1,0 +1,264 @@
+/collections/{slug}:
+  get:
+    operationId: getCollection
+    tags:
+      - public
+    summary: Retrieve a collection by slug
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Collection slug identifier
+      - $ref: '#/components/parameters/IfNoneMatch'
+    responses:
+      '200':
+        description: Collection retrieved successfully
+        headers:
+          ETag:
+            schema:
+              type: string
+            description: Entity tag for cache validation
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/Collection'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '304':
+        description: Not modified
+      '404':
+        $ref: '#/components/responses/NotFound'
+/search/suggest:
+  get:
+    operationId: suggestSearch
+    tags:
+      - public
+    summary: Suggest search results by title or alias
+    description: Returns title and alias matches only. Results are cached and short-lived.
+    parameters:
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description: Search query string
+    responses:
+      '200':
+        description: Suggestions retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/SuggestHit'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+      '429':
+        $ref: '#/components/responses/RateLimited'
+      '503':
+        $ref: '#/components/responses/ProviderUnavailable'
+/activity:
+  get:
+    operationId: listActivity
+    tags:
+      - public
+    summary: List public activity events
+    description: Returns public events in sequence order. The after parameter accepts string sequence IDs to paginate forward.
+    parameters:
+      - name: after
+        in: query
+        schema:
+          type: string
+          pattern: '^[0-9]+$'
+        description: Return events after this sequence ID (string)
+      - $ref: '#/components/parameters/Limit'
+    responses:
+      '200':
+        description: Activity events retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ActivityEvent'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+/stats:
+  get:
+    operationId: getStats
+    tags:
+      - public
+    summary: Retrieve current statistics snapshot
+    parameters:
+      - $ref: '#/components/parameters/IfNoneMatch'
+    responses:
+      '200':
+        description: Statistics snapshot retrieved successfully
+        headers:
+          ETag:
+            schema:
+              type: string
+            description: Entity tag for cache validation
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/StatsSnapshot'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '304':
+        description: Not modified
+/receipts/{id}:
+  get:
+    operationId: getReceipt
+    tags:
+      - public
+    summary: Retrieve a receipt by ID
+    description: Returns chain metadata, finality status, hash, and canonical bundle link. Pending status is returned as data, not an error.
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Receipt UUID
+    responses:
+      '200':
+        description: Receipt retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/Receipt'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '404':
+        $ref: '#/components/responses/NotFound'
+/methodology:
+  get:
+    operationId: getMethodology
+    tags:
+      - public
+    summary: Retrieve methodology documentation
+    parameters:
+      - $ref: '#/components/parameters/IfNoneMatch'
+    responses:
+      '200':
+        description: Methodology retrieved successfully
+        headers:
+          ETag:
+            schema:
+              type: string
+            description: Entity tag for cache validation
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/Methodology'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '304':
+        description: Not modified
+/status:
+  get:
+    operationId: getServiceStatus
+    tags:
+      - public
+    summary: Retrieve service operational status
+    responses:
+      '200':
+        description: Service status retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/ServiceStatus'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+/share/dossiers/{slug}/{version}:
+  get:
+    operationId: getShareCard
+    tags:
+      - public
+    summary: Retrieve share card for an approved publication
+    description: Returns immutable share image and metadata for an approved dossier version.
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Dossier slug
+      - name: version
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+        description: Publication version number
+    responses:
+      '200':
+        description: Share card retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/ShareCard'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'

@@ -1,0 +1,146 @@
+/submissions:
+  post:
+    operationId: createSubmission
+    tags:
+      - identity
+    summary: Submit a subject for research
+    description: Submits a subject for research and returns a moderation ticket with a real ticketNumber.
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SubmissionCreate'
+    responses:
+      '201':
+        description: Submission created successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/Submission'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+      '429':
+        $ref: '#/components/responses/RateLimited'
+/dossiers/{slug}/corrections:
+  post:
+    operationId: createCorrection
+    tags:
+      - identity
+    summary: Submit a correction to a dossier
+    description: Submits a correction for a specific dossier identified by slug.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+        description: The dossier slug
+      - $ref: '#/components/parameters/IdempotencyKey'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CorrectionCreate'
+    responses:
+      '201':
+        description: Correction created successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/Correction'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+      '429':
+        $ref: '#/components/responses/RateLimited'
+/me/submissions:
+  get:
+    operationId: listMySubmissions
+    tags:
+      - identity
+    summary: List caller's submissions
+    description: Retrieves only the authenticated caller's own submissions.
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+    responses:
+      '200':
+        description: Submissions retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Submission'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+/me/orders:
+  get:
+    operationId: listMyOrders
+    tags:
+      - identity
+    summary: List caller's investigation orders
+    description: Retrieves only the authenticated caller's own investigation orders. When the payments feature flag is disabled, returns an empty list.
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+    responses:
+      '200':
+        description: Investigation orders retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/InvestigationOrder'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'

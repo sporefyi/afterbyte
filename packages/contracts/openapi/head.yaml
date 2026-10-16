@@ -1,0 +1,334 @@
+# AFTERBYTE public API contract — v1 (FROZEN, Milestone 1)
+# This file is the ASSEMBLY SOURCE for openapi/v1.yaml. The build step
+# concatenates head.yaml + path chunk files into v1.yaml; v1.yaml is the
+# checked-in source of truth consumed by CI, the TS generator and the frontend.
+openapi: 3.1.0
+info:
+  title: AFTERBYTE API
+  version: 1.0.0
+  summary: Editorial research archive — versioned REST + public SSE.
+  description: |-
+    AFTERBYTE backend v1 contract. Prefix `/api/v1`.
+
+    Conventions (brief §12):
+    - Every success response uses the envelope
+      `{ "data": ..., "meta": { "requestId", "asOf", "dataMode", "freshness",
+      "nextCursor" } }`, except `GET .../canonical` which returns the exact
+      canonical bytes (hash verification must not depend on the envelope) and
+      `GET /events/stream` which is `text/event-stream`.
+    - Every error uses `{ "error": { "code", "message", "requestId",
+      "retryable", "fieldErrors" } }`.
+    - Cursor pagination: default page size 24, maximum 100, deterministic
+      ordering with an ID tiebreaker; `meta.nextCursor` carries the sort/filter
+      context of the request that produced it.
+    - `dataMode` is `"live"` for production reads. Fixtures and synthetic dev
+      data are labelled `"demo"` and production NEVER serves them.
+    - ETag/If-None-Match on public reads; If-Match (or `expectedRevision` body
+      field) on editorial updates; Idempotency-Key required on payment creation
+      and other costly mutations (scoped to user+route; reuse with a different
+      body is rejected).
+    - No token issuance, ticker or economics content anywhere in v1. Payments
+      are documented as feature-flagged OFF (`PAYMENTS_ENABLED=false`) until
+      treasury config, asset verification, fee policy, refund terms,
+      reconciliation and settlement tests are all confirmed.
+    - Placeholders: `{API_ORIGIN}` is used wherever a deployment URL would go.
+      No real deployment URLs are claimed in this contract.
+servers:
+  - url: '{API_ORIGIN}/api/v1'
+    description: Configured deployment origin (placeholder, not a real URL).
+tags:
+  - name: public
+    description: Unauthenticated read endpoints.
+  - name: identity
+    description: Wallet-authenticated personal endpoints.
+  - name: admin
+    description: Admin endpoints. Every route performs a permission check.
+  - name: payments
+    description: |-
+      Release B interfaces behind the `payments` feature flag. While
+      `PAYMENTS_ENABLED=false` every endpoint here returns 503
+      `FEATURE_UNAVAILABLE`. No payment CTA may be shown by the frontend.
+  - name: system
+    description: Container health probes. No envelope; never require auth.
+security:
+  - bearerAuth: []
+paths: {}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |-
+        Access token issued by POST /auth/verify after a wallet signature
+        challenge. Identity endpoints require any authenticated wallet;
+        admin endpoints additionally require an admin permission — every
+        admin route performs the check and returns 403 FORBIDDEN otherwise.
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      schema: { type: string }
+      description: Opaque cursor from a previous `meta.nextCursor`. Encodes the
+        sort/filter context; passing a cursor from a different query is a 422.
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 24 }
+    IfNoneMatch:
+      name: If-None-Match
+      in: header
+      schema: { type: string }
+      description: Public-read caching. Server returns 304 when the ETag matches.
+    IfMatch:
+      name: If-Match
+      in: header
+      schema: { type: string }
+      description: Optimistic concurrency for editorial updates. Stale value
+        yields 409 VERSION_CONFLICT.
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 128 }
+      description: |-
+        REQUIRED on payment creation and other costly mutations. Scoped to
+        user+route; the server persists the request hash and the response.
+        Replaying the same key with the SAME body returns the original
+        response; reuse with a DIFFERENT body is rejected (422
+        VALIDATION_FAILED). Keys expire after 24h.
+    LastEventId:
+      name: Last-Event-ID
+      in: header
+      schema: { type: string }
+      description: SSE reconnect cursor. Server replays retained events after
+        this ID; if older than the 7-day retention, emits `resync_required`.
+  headers:
+    ETag:
+      description: Entity tag for the response body.
+      schema: { type: string }
+    RetryAfter:
+      description: Seconds to wait before retrying.
+      schema: { type: integer, minimum: 0 }
+  responses:
+    ValidationFailed:
+      description: Request failed validation.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            error:
+              code: VALIDATION_FAILED
+              message: 'limit must be between 1 and 100'
+              requestId: 11111111-1111-4111-8111-111111111111
+              retryable: false
+              fieldErrors:
+                - { field: limit, code: too_large, message: 'maximum is 100' }
+    Unauthorized:
+      description: Missing or invalid authentication.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            error:
+              code: UNAUTHORIZED
+              message: 'authentication required'
+              requestId: 11111111-1111-4111-8111-111111111111
+              retryable: false
+              fieldErrors: []
+    Forbidden:
+      description: Authenticated but not permitted.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            error:
+              code: FORBIDDEN
+              message: 'admin permission required'
+              requestId: 11111111-1111-4111-8111-111111111111
+              retryable: false
+              fieldErrors: []
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            error:
+              code: NOT_FOUND
+              message: 'dossier not found'
+              requestId: 11111111-1111-4111-8111-111111111111
+              retryable: false
+              fieldErrors: []
+    VersionConflict:
+      description: Optimistic-concurrency conflict.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            error:
+              code: VERSION_CONFLICT
+              message: 'draft revision changed since you loaded it'
+              requestId: 11111111-1111-4111-8111-111111111111
+              retryable: false
+              fieldErrors: []
+    RateLimited:
+      description: Rate limit exceeded.
+      headers:
+        Retry-After: { $ref: '#/components/headers/RetryAfter' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            error:
+              code: RATE_LIMITED
+              message: 'too many requests, retry shortly'
+              requestId: 11111111-1111-4111-8111-111111111111
+              retryable: true
+              fieldErrors: []
+    FeatureUnavailable:
+      description: Feature flag is off (e.g. payments before activation).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            error:
+              code: FEATURE_UNAVAILABLE
+              message: 'payments are not enabled'
+              requestId: 11111111-1111-4111-8111-111111111111
+              retryable: false
+              fieldErrors: []
+    ProviderUnavailable:
+      description: Upstream provider unavailable; nothing was invented.
+      headers:
+        Retry-After: { $ref: '#/components/headers/RetryAfter' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            error:
+              code: PROVIDER_UNAVAILABLE
+              message: 'search provider unavailable'
+              requestId: 11111111-1111-4111-8111-111111111111
+              retryable: true
+              fieldErrors: []
+    PaymentNotFinalized:
+      description: On-chain payment not yet finalized.
+      headers:
+        Retry-After: { $ref: '#/components/headers/RetryAfter' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            error:
+              code: PAYMENT_NOT_FINALIZED
+              message: 'transaction not finalized on chain yet'
+              requestId: 11111111-1111-4111-8111-111111111111
+              retryable: true
+              fieldErrors: []
+    PaymentMismatch:
+      description: Submitted transaction does not match the payment intent.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            error:
+              code: PAYMENT_MISMATCH
+              message: 'transaction recipient does not match the intent'
+              requestId: 11111111-1111-4111-8111-111111111111
+              retryable: false
+              fieldErrors: []
+    ProofPending:
+      description: Receipt not yet finalized on chain; the publication stands.
+      headers:
+        Retry-After: { $ref: '#/components/headers/RetryAfter' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            error:
+              code: PROOF_PENDING
+              message: 'receipt anchoring in progress'
+              requestId: 11111111-1111-4111-8111-111111111111
+              retryable: true
+              fieldErrors: []
+  schemas:
+    # ------------------------------------------------------------------
+    # Primitives
+    Uuid:
+      type: string
+      format: uuid
+      example: 11111111-1111-4111-8111-111111111111
+    IsoDateTime:
+      type: string
+      format: date-time
+      example: '2026-10-16T08:00:00Z'
+    Sha256Hex:
+      type: string
+      pattern: '^[0-9a-f]{64}$'
+      example: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+    # ------------------------------------------------------------------
+    # Envelopes
+    ErrorCode:
+      type: string
+      enum:
+        - VALIDATION_FAILED
+        - UNAUTHORIZED
+        - FORBIDDEN
+        - NOT_FOUND
+        - VERSION_CONFLICT
+        - RATE_LIMITED
+        - FEATURE_UNAVAILABLE
+        - PROVIDER_UNAVAILABLE
+        - PAYMENT_NOT_FINALIZED
+        - PAYMENT_MISMATCH
+        - PROOF_PENDING
+    FieldError:
+      type: object
+      required: [field, code, message]
+      properties:
+        field: { type: string }
+        code: { type: string }
+        message: { type: string }
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, requestId, retryable, fieldErrors]
+          properties:
+            code: { $ref: '#/components/schemas/ErrorCode' }
+            message: { type: string, maxLength: 500 }
+            requestId: { $ref: '#/components/schemas/Uuid' }
+            retryable: { type: boolean }
+            fieldErrors:
+              type: array
+              items: { $ref: '#/components/schemas/FieldError' }
+    DataMode:
+      type: string
+      enum: [live, demo]
+      description: |-
+        "live" = production read. "demo" = clearly-labelled synthetic
+        fixtures/dev data. Production NEVER serves demo fixtures.
+    Freshness:
+      type: string
+      enum: [fresh, stale, unknown]
+    ResponseMeta:
+      type: object
+      required: [requestId, asOf, dataMode, freshness, nextCursor]
+      properties:
+        requestId: { $ref: '#/components/schemas/Uuid' }
+        asOf: { $ref: '#/components/schemas/IsoDateTime' }
+        dataMode: { $ref: '#/components/schemas/DataMode' }
+        freshness: { $ref: '#/components/schemas/Freshness' }
+        nextCursor:
+          type: ['string', 'null']
+          description: Opaque cursor for the next page; null when exhausted.
+        sort:
+          type: string
+          description: Active sort key for this page (list endpoints).
+        appliedFilters:
+          type: object
+          additionalProperties: true
+          description: Filter context echoed back for list endpoints.

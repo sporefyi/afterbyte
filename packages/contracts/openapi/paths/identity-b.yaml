@@ -1,0 +1,275 @@
+/me/bookmarks:
+  get:
+    operationId: listBookmarks
+    tags:
+      - identity
+    summary: List user bookmarks
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+    responses:
+      '200':
+        description: Bookmarks retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Bookmark'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+/me/bookmarks/{subjectId}:
+  delete:
+    operationId: deleteBookmark
+    tags:
+      - identity
+    summary: Delete a bookmark
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: subjectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Subject identifier
+    responses:
+      '204':
+        description: Bookmark deleted successfully
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '404':
+        $ref: '#/components/responses/NotFound'
+  put:
+    operationId: putBookmark
+    tags:
+      - identity
+    summary: Create or update a bookmark
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: subjectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Subject identifier
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Bookmark'
+    responses:
+      '200':
+        description: Bookmark created or updated successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/Bookmark'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+/me/watchlist:
+  get:
+    operationId: listWatchlist
+    tags:
+      - identity
+    summary: List user watchlist
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+    responses:
+      '200':
+        description: Watchlist retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/WatchlistItem'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+/me/watchlist/{subjectId}:
+  delete:
+    operationId: deleteWatchlistItem
+    tags:
+      - identity
+    summary: Delete a watchlist item
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: subjectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Subject identifier
+    responses:
+      '204':
+        description: Watchlist item deleted successfully
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '404':
+        $ref: '#/components/responses/NotFound'
+  put:
+    operationId: putWatchlistItem
+    tags:
+      - identity
+    summary: Create or update a watchlist item
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: subjectId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Subject identifier
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              note:
+                type: string
+                maxLength: 280
+                nullable: true
+    responses:
+      '200':
+        description: Watchlist item created or updated successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/WatchlistItem'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+/me/notifications:
+  get:
+    operationId: listNotifications
+    tags:
+      - identity
+    summary: List user notifications
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: unreadOnly
+        in: query
+        schema:
+          type: boolean
+          default: false
+        description: Filter to unread notifications only
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+    responses:
+      '200':
+        description: Notifications retrieved successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Notification'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+/me/notifications/{id}:
+  patch:
+    operationId: patchNotification
+    tags:
+      - identity
+    summary: Update notification read state
+    description: Update notification read state only — no other fields are mutable.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Notification identifier
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/NotificationReadUpdate'
+    responses:
+      '200':
+        description: Notification updated successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/Notification'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'

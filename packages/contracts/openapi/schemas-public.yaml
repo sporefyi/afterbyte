@@ -1,0 +1,539 @@
+    # ------------------------------------------------------------------
+    # Dossier domain (brief §13 shape)
+    LifecycleStatus:
+      type: string
+      description: |-
+        Reviewed lifecycle status of the subject. Known values include
+        "active" and "uncertain"; the reviewed set is editorial, not closed.
+      example: uncertain
+    EvidenceBand:
+      type: string
+      description: Editorial evidence-coverage band, e.g. "limited".
+      example: limited
+    EvidenceAssessment:
+      type: object
+      required: [band, reason]
+      properties:
+        band: { $ref: '#/components/schemas/EvidenceBand' }
+        reason: { type: string }
+    HeroAsset:
+      type: ['object', 'null']
+      properties:
+        url: { type: string, format: uri }
+        alt: { type: string }
+        contentType: { type: string }
+        width: { type: integer }
+        height: { type: integer }
+    ContentBlock:
+      type: object
+      required: [type]
+      discriminator:
+        propertyName: type
+      oneOf:
+        - $ref: '#/components/schemas/ParagraphBlock'
+        - $ref: '#/components/schemas/HeadingBlock'
+        - $ref: '#/components/schemas/ListBlock'
+        - $ref: '#/components/schemas/QuoteBlock'
+        - $ref: '#/components/schemas/ImageBlock'
+        - $ref: '#/components/schemas/EvidenceReferenceBlock'
+      description: |-
+        Sanitized structured blocks only — never arbitrary model-generated
+        HTML. Factual blocks carry claimIds; claims resolve to public
+        evidence records.
+    ParagraphBlock:
+      type: object
+      required: [type, text]
+      properties:
+        type: { type: string, enum: [paragraph] }
+        text: { type: string }
+        claimIds:
+          type: array
+          items: { type: string }
+    HeadingBlock:
+      type: object
+      required: [type, text, level]
+      properties:
+        type: { type: string, enum: [heading] }
+        text: { type: string }
+        level: { type: integer, minimum: 2, maximum: 4 }
+    ListBlock:
+      type: object
+      required: [type, items]
+      properties:
+        type: { type: string, enum: [list] }
+        ordered: { type: boolean, default: false }
+        items:
+          type: array
+          items:
+            type: object
+            required: [text]
+            properties:
+              text: { type: string }
+              claimIds:
+                type: array
+                items: { type: string }
+    QuoteBlock:
+      type: object
+      required: [type, text]
+      properties:
+        type: { type: string, enum: [quote] }
+        text: { type: string }
+        attribution: { type: string }
+        claimIds:
+          type: array
+          items: { type: string }
+    ImageBlock:
+      type: object
+      required: [type, url]
+      properties:
+        type: { type: string, enum: [image] }
+        url: { type: string, format: uri }
+        alt: { type: string }
+        caption: { type: string }
+    EvidenceReferenceBlock:
+      type: object
+      required: [type, claimId]
+      properties:
+        type: { type: string, enum: [evidence-reference] }
+        claimId: { type: string }
+        note: { type: string }
+    DossierSection:
+      type: object
+      required: [id, heading, blocks]
+      properties:
+        id: { type: string }
+        heading: { type: string }
+        blocks:
+          type: array
+          items: { $ref: '#/components/schemas/ContentBlock' }
+    Claim:
+      type: object
+      required: [id, statement, evidenceRecordIds]
+      properties:
+        id: { type: string }
+        statement: { type: string }
+        evidenceRecordIds:
+          type: array
+          items: { type: string }
+    EvidenceRecord:
+      type: object
+      required: [id, kind, title]
+      properties:
+        id: { type: string }
+        kind: { type: string, example: article }
+        title: { type: string }
+        url: { type: string, format: uri }
+        excerpt: { type: string, description: Approved public excerpt only. }
+        publisher: { type: string }
+        publishedAt: { $ref: '#/components/schemas/IsoDateTime' }
+        capturedAt: { $ref: '#/components/schemas/IsoDateTime' }
+    ProofSummary:
+      type: object
+      required: [status, receiptId]
+      properties:
+        status:
+          type: string
+          enum: [pending, finalized, failed, unavailable]
+          description: |-
+            "pending" while the receipt anchors; publication itself is
+            authoritative in the DB and unaffected by receipt state.
+        receiptId: { $ref: '#/components/schemas/Uuid' }
+        signature:
+          type: ['string', 'null']
+          description: Chain transaction signature once finalized.
+    DossierSummary:
+      type: object
+      required: [id, slug, name, category, version, summary, lifecycleStatus,
+        publishedAt, lastReviewedAt]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        slug: { type: string, maxLength: 200 }
+        name: { type: string }
+        category: { type: string, example: website }
+        version: { type: integer, minimum: 1 }
+        summary: { type: string }
+        lifecycleStatus: { $ref: '#/components/schemas/LifecycleStatus' }
+        publishedAt: { $ref: '#/components/schemas/IsoDateTime' }
+        lastReviewedAt: { $ref: '#/components/schemas/IsoDateTime' }
+        heroAsset: { $ref: '#/components/schemas/HeroAsset' }
+    DossierDetail:
+      type: object
+      required:
+        - id
+        - slug
+        - name
+        - category
+        - version
+        - summary
+        - lifecycleStatus
+        - statusReason
+        - evidenceAssessment
+        - publishedAt
+        - lastReviewedAt
+        - lastObservedAt
+        - nextReviewAt
+        - heroAsset
+        - sections
+        - timelinePreview
+        - sourceCount
+        - proof
+        - availableMetrics
+        - relationsPreview
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        slug: { type: string, maxLength: 200 }
+        name: { type: string }
+        category: { type: string, example: website }
+        version: { type: integer, minimum: 1 }
+        summary: { type: string }
+        lifecycleStatus: { $ref: '#/components/schemas/LifecycleStatus' }
+        statusReason: { type: string }
+        evidenceAssessment: { $ref: '#/components/schemas/EvidenceAssessment' }
+        publishedAt: { $ref: '#/components/schemas/IsoDateTime' }
+        lastReviewedAt: { $ref: '#/components/schemas/IsoDateTime' }
+        lastObservedAt: { $ref: '#/components/schemas/IsoDateTime' }
+        nextReviewAt: { $ref: '#/components/schemas/IsoDateTime' }
+        heroAsset: { $ref: '#/components/schemas/HeroAsset' }
+        sections:
+          type: array
+          items: { $ref: '#/components/schemas/DossierSection' }
+        timelinePreview:
+          type: array
+          items: { $ref: '#/components/schemas/TimelineEvent' }
+        sourceCount: { type: integer, minimum: 0 }
+        proof: { $ref: '#/components/schemas/ProofSummary' }
+        availableMetrics:
+          type: array
+          items: { type: string }
+          description: Metric names with actual observations behind them.
+        relationsPreview:
+          type: array
+          items: { $ref: '#/components/schemas/Relation' }
+    DossierDetailResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data: { $ref: '#/components/schemas/DossierDetail' }
+        meta: { $ref: '#/components/schemas/ResponseMeta' }
+    DossierSummaryResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/DossierSummary' }
+        meta: { $ref: '#/components/schemas/ResponseMeta' }
+    # ------------------------------------------------------------------
+    # Versions, timeline, sources, metrics, relations, changes
+    VersionSummary:
+      type: object
+      required: [version, publishedAt, canonicalHash]
+      properties:
+        version: { type: integer, minimum: 1 }
+        publishedAt: { $ref: '#/components/schemas/IsoDateTime' }
+        label:
+          type: ['string', 'null']
+          enum: [correction, retraction, null]
+        changeSummary: { type: string }
+        canonicalHash: { $ref: '#/components/schemas/Sha256Hex' }
+    VersionDetail:
+      type: object
+      required: [version, publishedAt, canonicalHash, content, receipt]
+      properties:
+        version: { type: integer, minimum: 1 }
+        publishedAt: { $ref: '#/components/schemas/IsoDateTime' }
+        label:
+          type: ['string', 'null']
+          enum: [correction, retraction, null]
+        changeSummary: { type: string }
+        canonicalHash: { $ref: '#/components/schemas/Sha256Hex' }
+        previousPayloadHash: { $ref: '#/components/schemas/Sha256Hex' }
+        content: { $ref: '#/components/schemas/DossierDetail' }
+        receipt: { $ref: '#/components/schemas/Receipt' }
+    DatePrecision:
+      type: string
+      enum: [day, month, year]
+    TimelineEvent:
+      type: object
+      required: [id, date, datePrecision, title, evidenceRefs]
+      properties:
+        id: { type: string }
+        date: { type: string, example: '2019-06-01' }
+        datePrecision: { $ref: '#/components/schemas/DatePrecision' }
+        title: { type: string }
+        summary: { type: string }
+        evidenceRefs:
+          type: array
+          items: { type: string }
+    SourceRecord:
+      type: object
+      required: [id, kind, title, url]
+      properties:
+        id: { type: string }
+        kind: { type: string, example: article }
+        title: { type: string }
+        url: { type: string, format: uri }
+        excerpt: { type: string, description: Approved public excerpt only. }
+        publisher: { type: string }
+        publishedAt: { $ref: '#/components/schemas/IsoDateTime' }
+        capturedAt: { $ref: '#/components/schemas/IsoDateTime' }
+    MetricObservation:
+      type: object
+      required: [id, name, unit, value, observedAt, provenance]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        unit: { type: string }
+        value:
+          type: string
+          description: Decimal or integer as a string; never a float.
+        observedAt: { $ref: '#/components/schemas/IsoDateTime' }
+        provenance: { type: string }
+        coverageStart: { $ref: '#/components/schemas/IsoDateTime' }
+        coverageEnd: { $ref: '#/components/schemas/IsoDateTime' }
+      description: |-
+        Actual observations only, with units, provenance and coverage
+        intervals. Missing intervals remain missing — never backfilled with
+        generated curves.
+    Relation:
+      type: object
+      required: [subjectId, slug, name, kind]
+      properties:
+        subjectId: { $ref: '#/components/schemas/Uuid' }
+        slug: { type: string }
+        name: { type: string }
+        kind: { type: string, example: successor }
+        claimIds:
+          type: array
+          items: { type: string }
+    ChangeEntry:
+      type: object
+      required: [version, previousVersion, publishedAt, summary]
+      properties:
+        version: { type: integer, minimum: 1 }
+        previousVersion: { type: integer, minimum: 1 }
+        publishedAt: { $ref: '#/components/schemas/IsoDateTime' }
+        summary: { type: string }
+        editorialNote: { type: string }
+    # ------------------------------------------------------------------
+    # Home, collections, search, activity, stats, receipts, misc public
+    FeatureFlags:
+      type: object
+      required: [payments, token, submissions, corrections, accounts]
+      properties:
+        payments: { type: boolean }
+        token: { type: boolean }
+        submissions: { type: boolean }
+        corrections: { type: boolean }
+        accounts: { type: boolean }
+    ProviderStatus:
+      type: object
+      required: [id, kind, status, lastCheckedAt]
+      properties:
+        id: { type: string }
+        kind: { type: string, example: search }
+        status: { type: string, enum: [healthy, degraded, unavailable] }
+        lastCheckedAt: { $ref: '#/components/schemas/IsoDateTime' }
+    AppConfig:
+      type: object
+      required:
+        - brand
+        - canonicalUrls
+        - features
+        - chain
+        - providers
+        - acceptedPaymentAssets
+      properties:
+        brand:
+          type: object
+          required: [name, tagline]
+          properties:
+            name: { type: string, example: AFTERBYTE }
+            tagline: { type: string }
+        canonicalUrls:
+          type: object
+          required: [web]
+          properties:
+            web: { type: string, format: uri }
+            api: { type: string, format: uri }
+        features: { $ref: '#/components/schemas/FeatureFlags' }
+        chain:
+          type: object
+          required: [name]
+          properties:
+            name: { type: string, example: solana }
+            cluster: { type: string, example: mainnet-beta }
+        receiptProgramId: { type: string, description: Set only when configured. }
+        acceptedPaymentAssets:
+          type: array
+          items: { type: string }
+          description: Empty until payments are enabled and assets verified.
+        providers:
+          type: array
+          items: { $ref: '#/components/schemas/ProviderStatus' }
+    HomeEdition:
+      type: object
+      required:
+        - editionId
+        - headline
+        - featured
+        - recentChanges
+        - stillAlive
+        - researchFeedPreview
+        - stats
+      properties:
+        editionId: { $ref: '#/components/schemas/Uuid' }
+        headline: { type: string }
+        featured:
+          type: array
+          items: { $ref: '#/components/schemas/DossierSummary' }
+        recentChanges:
+          type: array
+          items: { $ref: '#/components/schemas/ChangeEntry' }
+        stillAlive:
+          type: array
+          items: { $ref: '#/components/schemas/DossierSummary' }
+          description: Reviewed "Still Alive" selections.
+        researchFeedPreview:
+          type: array
+          items: { $ref: '#/components/schemas/ActivityEvent' }
+        stats: { $ref: '#/components/schemas/StatsSnapshot' }
+    StatsSnapshot:
+      type: object
+      required: [asOf, freshness, counters]
+      properties:
+        asOf: { $ref: '#/components/schemas/IsoDateTime' }
+        freshness: { $ref: '#/components/schemas/Freshness' }
+        counters:
+          type: array
+          items:
+            type: object
+            required: [key, value, definition]
+            properties:
+              key: { type: string, example: archive_count }
+              value: { type: integer, minimum: 0 }
+              definition:
+                type: string
+                example: non-retracted published subjects
+      description: |-
+        Published counters with definitions. archive_count = non-retracted
+        published subjects; active_count = subjects whose current reviewed
+        status is active; recorded_count = versions with finalized receipts.
+        Never label a source count as people or users.
+    Collection:
+      type: object
+      required: [slug, title, description, items]
+      properties:
+        slug: { type: string }
+        title: { type: string }
+        description: { type: string }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/DossierSummary' }
+    SuggestHit:
+      type: object
+      required: [slug, name, matchedAlias]
+      properties:
+        slug: { type: string }
+        name: { type: string }
+        matchedAlias: { type: string }
+        category: { type: string }
+    ActivityEvent:
+      type: object
+      required:
+        - eventId
+        - sequenceId
+        - eventType
+        - occurredAt
+        - aggregateRevision
+        - payload
+      properties:
+        eventId: { $ref: '#/components/schemas/Uuid' }
+        sequenceId:
+          type: string
+          pattern: '^[0-9]+$'
+          description: PostgreSQL BIGINT sequence serialized as a string.
+        eventType:
+          type: string
+          enum:
+            - dossier.published
+            - dossier.corrected
+            - dossier.retracted
+            - subject.status_changed
+            - research.started
+            - research.completed
+            - receipt.finalized
+            - resync_required
+        occurredAt: { $ref: '#/components/schemas/IsoDateTime' }
+        subjectId: { $ref: '#/components/schemas/Uuid' }
+        dossierVersion: { type: integer, minimum: 1 }
+        aggregateRevision: { type: integer, minimum: 0 }
+        payload:
+          type: object
+          additionalProperties: true
+          description: Small public payload; never sensitive.
+      description: |-
+        Delivery is at-least-once; consumers deduplicate by eventId and
+        ignore older aggregateRevision values.
+    Receipt:
+      type: object
+      required: [id, subjectId, version, status, payloadHash]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        subjectId: { $ref: '#/components/schemas/Uuid' }
+        version: { type: integer, minimum: 1 }
+        status:
+          type: string
+          enum: [pending, finalized, failed, unavailable]
+        payloadHash: { $ref: '#/components/schemas/Sha256Hex' }
+        signature: { type: ['string', 'null'] }
+        slot: { type: ['integer', 'null'] }
+        finalizedAt: { $ref: '#/components/schemas/IsoDateTime' }
+        canonicalUrl:
+          type: ['string', 'null']
+          format: uri
+          description: Link to the canonical bundle for independent verification.
+        explorerUrl:
+          type: ['string', 'null']
+          format: uri
+          description: Independently verifiable transaction link.
+    Methodology:
+      type: object
+      required: [version, updatedAt, sections]
+      properties:
+        version: { type: string }
+        updatedAt: { $ref: '#/components/schemas/IsoDateTime' }
+        sections:
+          type: array
+          items:
+            type: object
+            required: [heading, body]
+            properties:
+              heading: { type: string }
+              body: { type: string }
+    ServiceStatus:
+      type: object
+      required: [status, asOf, components]
+      properties:
+        status: { type: string, enum: [operational, degraded, maintenance] }
+        asOf: { $ref: '#/components/schemas/IsoDateTime' }
+        components:
+          type: array
+          items:
+            type: object
+            required: [name, status]
+            properties:
+              name: { type: string }
+              status: { type: string, enum: [operational, degraded, down] }
+              detail: { type: string }
+      description: Safe operational status — no secrets.
+    ShareCard:
+      type: object
+      required: [url, title, description, version]
+      properties:
+        url: { type: string, format: uri }
+        imageUrl: { type: string, format: uri }
+        title: { type: string }
+        description: { type: string }
+        version: { type: integer, minimum: 1 }
+      description: Immutable share image/metadata for an approved publication.

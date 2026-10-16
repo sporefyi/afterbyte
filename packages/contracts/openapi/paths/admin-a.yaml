@@ -1,0 +1,530 @@
+/admin/research-runs:
+  get:
+    operationId: listResearchRuns
+    tags:
+      - admin
+    summary: List research runs with optional filtering
+    description: Retrieve paginated research runs. Every admin route performs a permission check; returns 403 FORBIDDEN without admin permission.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum:
+            - queued
+            - awaiting_provider
+            - running
+            - succeeded
+            - failed
+            - cancelled
+      - name: kind
+        in: query
+        schema:
+          type: string
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+    responses:
+      '200':
+        description: Research runs retrieved
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ResearchRun'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+  post:
+    operationId: createResearchRun
+    tags:
+      - admin
+    summary: Create a new research run
+    description: Enqueue a research run. When the model provider is unavailable, the run transitions to queued or awaiting_provider state and retries asynchronously. Every admin route performs a permission check; returns 403 FORBIDDEN without admin permission.
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ResearchRunCreate'
+    responses:
+      '202':
+        description: Research run created and queued
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/ResearchRun'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+      '503':
+        $ref: '#/components/responses/ProviderUnavailable'
+/admin/research-runs/{id}:
+  get:
+    operationId: getResearchRun
+    tags:
+      - admin
+    summary: Retrieve a research run by ID
+    description: Fetch a single research run. Every admin route performs a permission check; returns 403 FORBIDDEN without admin permission.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Research run ID
+    responses:
+      '200':
+        description: Research run retrieved
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/ResearchRun'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '404':
+        $ref: '#/components/responses/NotFound'
+/admin/research-runs/{id}/cancel:
+  post:
+    operationId: cancelResearchRun
+    tags:
+      - admin
+    summary: Cancel a research run
+    description: Transition a research run to cancelled state. Returns 409 if already in a terminal state. Every admin route performs a permission check; returns 403 FORBIDDEN without admin permission.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Research run ID
+    responses:
+      '200':
+        description: Research run cancelled
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/ResearchRun'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '409':
+        $ref: '#/components/responses/VersionConflict'
+/admin/research-runs/{id}/retry:
+  post:
+    operationId: retryResearchRun
+    tags:
+      - admin
+    summary: Retry a failed research run
+    description: Requeue a failed research run. Returns 409 if not in a retryable state. Every admin route performs a permission check; returns 403 FORBIDDEN without admin permission.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Research run ID
+      - $ref: '#/components/parameters/IdempotencyKey'
+    responses:
+      '202':
+        description: Research run requeued
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/ResearchRun'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '409':
+        $ref: '#/components/responses/VersionConflict'
+/admin/drafts:
+  get:
+    operationId: listDrafts
+    tags:
+      - admin
+    summary: List drafts with optional filtering
+    description: Retrieve paginated drafts. Every admin route performs a permission check; returns 403 FORBIDDEN without admin permission.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: status
+        in: query
+        schema:
+          type: string
+          enum:
+            - draft
+            - in_review
+            - approved
+            - published
+            - rejected
+      - name: subjectId
+        in: query
+        schema:
+          type: string
+          format: uuid
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Limit'
+    responses:
+      '200':
+        description: Drafts retrieved
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Draft'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+  post:
+    operationId: createDraft
+    tags:
+      - admin
+    summary: Create a draft
+    description: Create a new dossier draft for a subject. Every admin route performs a permission check; returns 403 FORBIDDEN without admin permission.
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - subjectId
+              - slug
+            properties:
+              subjectId:
+                type: string
+                format: uuid
+              slug:
+                type: string
+                minLength: 1
+                maxLength: 128
+    responses:
+      '201':
+        description: Draft created
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/Draft'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+
+/admin/drafts/{id}:
+  get:
+    operationId: getDraft
+    tags:
+      - admin
+    summary: Retrieve a draft by ID
+    description: Fetch a single draft. Every admin route performs a permission check; returns 403 FORBIDDEN without admin permission.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Draft ID
+    responses:
+      '200':
+        description: Draft retrieved
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/Draft'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '404':
+        $ref: '#/components/responses/NotFound'
+  patch:
+    operationId: patchDraft
+    tags:
+      - admin
+    summary: Update a draft
+    description: Patch a draft with optimistic concurrency control. The expectedRevision in the request body must match the current revision; a stale revision returns 409 VERSION_CONFLICT. Every admin route performs a permission check; returns 403 FORBIDDEN without admin permission.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Draft ID
+      - $ref: '#/components/parameters/IfMatch'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DraftPatch'
+    responses:
+      '200':
+        description: Draft updated
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/Draft'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '409':
+        $ref: '#/components/responses/VersionConflict'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+/admin/drafts/{id}/submit-review:
+  post:
+    operationId: submitDraftReview
+    tags:
+      - admin
+    summary: Submit a draft for review
+    description: Transition a draft to in_review state. Returns 409 if the draft is not in draft state. Every admin route performs a permission check; returns 403 FORBIDDEN without admin permission.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Draft ID
+    responses:
+      '200':
+        description: Draft submitted for review
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/Draft'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '409':
+        $ref: '#/components/responses/VersionConflict'
+/admin/drafts/{id}/approve:
+  post:
+    operationId: approveDraft
+    tags:
+      - admin
+    summary: Approve a draft
+    description: Transition a draft to approved state. Requires expectedRevision to match the current revision. Returns 409 if revision mismatch or invalid state. Every admin route performs a permission check; returns 403 FORBIDDEN without admin permission.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Draft ID
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - expectedRevision
+            properties:
+              expectedRevision:
+                type: integer
+                minimum: 1
+    responses:
+      '200':
+        description: Draft approved
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/Draft'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '409':
+        $ref: '#/components/responses/VersionConflict'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'
+/admin/drafts/{id}/publish:
+  post:
+    operationId: publishDraft
+    tags:
+      - admin
+    summary: Publish an approved draft
+    description: Create an immutable version from an approved draft. Publishing requires the draft to be in approved state and the exact revision that was reviewed. The database commit is the publication authority. Every admin route performs a permission check; returns 403 FORBIDDEN without admin permission.
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+        description: Draft ID
+      - $ref: '#/components/parameters/IdempotencyKey'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PublishRequest'
+    responses:
+      '201':
+        description: Draft published as version
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+                - meta
+              properties:
+                data:
+                  $ref: '#/components/schemas/VersionSummary'
+                meta:
+                  $ref: '#/components/schemas/ResponseMeta'
+      '401':
+        $ref: '#/components/responses/Unauthorized'
+      '403':
+        $ref: '#/components/responses/Forbidden'
+      '404':
+        $ref: '#/components/responses/NotFound'
+      '409':
+        $ref: '#/components/responses/VersionConflict'
+      '422':
+        $ref: '#/components/responses/ValidationFailed'

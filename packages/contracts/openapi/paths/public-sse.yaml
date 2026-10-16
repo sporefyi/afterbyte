@@ -1,0 +1,83 @@
+/events/stream:
+    get:
+      operationId: streamEvents
+      tags:
+        - public
+      summary: Stream public events via Server-Sent Events
+      description: |
+        Opens a persistent Server-Sent Events stream of public domain events.
+        
+        **SSE Contract:**
+        - Heartbeat comment lines (`:`) are sent every 20 seconds to keep the connection alive.
+        - Each event is a JSON object with fields: eventId, sequenceId, eventType, occurredAt, subjectId, dossierVersion, aggregateRevision, and payload.
+        - Reconnect using the Last-Event-ID header to resume from a known point; the server replays retained events.
+        - Events are retained for 7 days. If the Last-Event-ID cursor is older than retention, the server emits a resync_required event; the client must then reload canonical state via the dossier endpoints.
+        - Delivery is at-least-once; consumers must deduplicate by eventId and ignore events with older aggregateRevision values.
+        - All events are sanitized public events only; no instructions to manipulate DOM or execute untrusted content are included.
+        
+        **Event Types:**
+        - `dossier.published`: A dossier was published.
+        - `dossier.corrected`: A dossier was corrected.
+        - `dossier.retracted`: A dossier was retracted.
+        - `subject.status_changed`: A subject's status changed.
+        - `research.started`: A research run started.
+        - `research.completed`: A research run completed.
+        - `receipt.finalized`: A publication receipt was finalized on chain.
+        - `resync_required`: Retention window exceeded; client must reload canonical state.
+      parameters:
+        - $ref: '#/components/parameters/LastEventId'
+        - name: after
+          in: query
+          schema:
+            type: string
+            pattern: '^[0-9]+$'
+          description: Optional sequence ID to resume after; overrides Last-Event-ID if both provided.
+      responses:
+        '200':
+          description: Server-Sent Events stream opened successfully.
+          content:
+            text/event-stream:
+              schema:
+                type: object
+                required:
+                  - eventId
+                  - sequenceId
+                  - eventType
+                  - occurredAt
+                  - aggregateRevision
+                properties:
+                  eventId:
+                    type: string
+                    description: Unique identifier for this event; used for deduplication.
+                  sequenceId:
+                    type: string
+                    pattern: '^[0-9]+$'
+                    description: Monotonic sequence number for ordering and resumption.
+                  eventType:
+                    type: string
+                    enum:
+                      - dossier.published
+                      - dossier.corrected
+                      - dossier.retracted
+                      - subject.status_changed
+                      - research.started
+                      - research.completed
+                      - receipt.finalized
+                      - resync_required
+                    description: Type of event that occurred.
+                  occurredAt:
+                    type: string
+                    format: date-time
+                    description: RFC3339 UTC timestamp when the event occurred.
+                  subjectId:
+                    type: string
+                    description: Identifier of the subject involved; omitted for resync_required.
+                  dossierVersion:
+                    type: integer
+                    description: Version of the dossier affected; omitted if not applicable.
+                  aggregateRevision:
+                    type: integer
+                    description: Aggregate revision number; used to detect stale replays.
+                  payload:
+                    type: object
+                    description: Event-specific payload; structure varies by eventType.

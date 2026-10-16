@@ -1,0 +1,24 @@
+{
+  "dependencies": {
+    "pino": "10.4.0"
+  },
+  "description": "AFTERBYTE observability — structured JSON logs, W3C trace propagation, health probes.",
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "typescript": "5.7.3",
+    "vitest": "5.0.5"
+  },
+  "engines": {
+    "node": ">=20.18.0"
+  },
+  "main": "dist/index.js",
+  "name": "@afterbyte/observability",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "type": "module",
+  "types": "dist/index.d.ts",
+  "version": "0.1.0"
+}
