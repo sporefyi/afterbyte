@@ -203,12 +203,6 @@ export const subjects = pgTable(
     index("subjects_kind_idx").on(table.kind),
     index("subjects_visibility_idx").on(table.visibility),
     index("subjects_search_vector_gin_idx").using("gin", table.searchVector),
-    // Optional trigram index for aliases (§4). gin_trgm_ops does not support
-    // text[] directly, so index the space-joined string expression.
-    index("subjects_aliases_trgm_idx").using(
-      "gin",
-      sql`array_to_string(${table.aliases}, ' ') gin_trgm_ops`,
-    ),
   ],
 );
 
@@ -237,12 +231,6 @@ export const subjectExternalIdentifiers = pgTable(
       table.identifier,
     ),
     index("subject_external_identifiers_subject_idx").on(table.subjectId),
-    // Optional trigram index for aliases (§4). gin_trgm_ops does not support
-    // text[] directly, so index the space-joined string expression.
-    index("subject_external_identifiers_aliases_trgm_idx").using(
-      "gin",
-      sql`array_to_string(${table.aliases}, ' ') gin_trgm_ops`,
-    ),
   ],
 );
 
