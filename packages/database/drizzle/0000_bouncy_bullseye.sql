@@ -1,6 +1,8 @@
 -- AFTERBYTE initial schema (Lane 1: database).
 -- pg_trgm is required for the trigram GIN indexes on aliases.
--- drizzle-kit does not emit CREATE EXTENSION, so it is prepended here by hand.
+-- pgcrypto is required for gen_random_uuid() column defaults.
+-- drizzle-kit does not emit CREATE EXTENSION, so they are prepended here by hand.
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";--> statement-breakpoint
 CREATE EXTENSION IF NOT EXISTS "pg_trgm";--> statement-breakpoint
 
 CREATE TYPE "public"."role" AS ENUM('admin', 'editor', 'reviewer', 'viewer');--> statement-breakpoint
