@@ -47,7 +47,8 @@ async function main(): Promise<void> {
         await runMigrations();
         log.info('migrations applied');
       } catch (err) {
-        migrationError = err instanceof Error ? err.message : String(err);
+        const cause = err instanceof Error ? (err.cause instanceof Error ? ` | cause: ${err.cause.message}` : '') : '';
+        migrationError = (err instanceof Error ? err.message : String(err)) + cause;
         log.error({ err: migrationError }, 'database migrations FAILED — continuing without migrated schema');
       }
     }
