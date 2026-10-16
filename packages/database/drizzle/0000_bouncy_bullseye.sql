@@ -111,7 +111,7 @@ CREATE TABLE "claims" (
 	"claim_kind" "claim_kind" NOT NULL,
 	"review_state" "claim_review_state" DEFAULT 'pending' NOT NULL,
 	"reviewer_note" text,
-	"search_vector" "tsvector" GENERATED ALWAYS AS (to_tsvector('english', coalesce(claim_text, ''))) STORED NOT NULL,
+	"search_vector" "tsvector",
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -252,7 +252,7 @@ CREATE TABLE "subjects" (
 	"official_urls" text[] DEFAULT '{}'::text[] NOT NULL,
 	"visibility" "subject_visibility" DEFAULT 'hidden' NOT NULL,
 	"current_published_version_id" uuid,
-	"search_vector" "tsvector" GENERATED ALWAYS AS (to_tsvector('english', coalesce(canonical_name, '') || ' ' || coalesce(short_description, '') || ' ' || coalesce(array_to_string(aliases, ' '), ''))) STORED NOT NULL,
+	"search_vector" "tsvector",
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "subjects_slug_unique" UNIQUE("slug")
