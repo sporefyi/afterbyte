@@ -1,4 +1,4 @@
-# AFTERBYTE API — multi-stage build (repo-root context, see docker-compose.yml).
+# AFTERBYTE API — multi-stage build (repo-root context).
 FROM node:24-slim AS base
 RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 WORKDIR /repo
@@ -6,14 +6,18 @@ WORKDIR /repo
 FROM base AS deps
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY apps/api/package.json apps/api/
+COPY packages/database/package.json packages/database/
 COPY packages/observability/package.json packages/observability/
 COPY packages/storage/package.json packages/storage/
 RUN pnpm install --frozen-lockfile --filter @afterbyte/api...
 
 FROM base AS build
-COPY --from=deps /repo/node_modules ./node_modules
+# Copy the whole deps layer (preserves pnpm's per-package node_modules links),
+# then overlay the full source.
+COPY --from=deps /repo /repo
 COPY . .
-RUN pnpm --filter @afterbyte/observability --filter @afterbyte/storage --filter @afterbyte/api build
+# The `...` builds the api plus all of its workspace dependencies, topologically.
+RUN pnpm --filter @afterbyte/api... build
 RUN pnpm --filter @afterbyte/api deploy /srv/deploy --prod
 
 FROM node:24-slim AS runtime
