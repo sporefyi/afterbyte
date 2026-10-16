@@ -622,14 +622,14 @@ CREATE INDEX "sources_domain_idx" ON "sources" USING btree ("domain");--> statem
 CREATE INDEX "sources_source_type_idx" ON "sources" USING btree ("source_type");--> statement-breakpoint
 CREATE UNIQUE INDEX "subject_external_identifiers_unique_idx" ON "subject_external_identifiers" USING btree ("subject_id","id_kind","identifier");--> statement-breakpoint
 CREATE INDEX "subject_external_identifiers_subject_idx" ON "subject_external_identifiers" USING btree ("subject_id");--> statement-breakpoint
-CREATE INDEX "subject_external_identifiers_aliases_trgm_idx" ON "subject_external_identifiers" USING gin ("aliases" gin_trgm_ops);--> statement-breakpoint
+CREATE INDEX "subject_external_identifiers_aliases_trgm_idx" ON "subject_external_identifiers" USING gin (array_to_string("aliases", ' ') gin_trgm_ops);--> statement-breakpoint
 CREATE UNIQUE INDEX "subject_relations_unique_idx" ON "subject_relations" USING btree ("from_subject_id","to_subject_id","relationship_type");--> statement-breakpoint
 CREATE INDEX "subject_relations_from_idx" ON "subject_relations" USING btree ("from_subject_id");--> statement-breakpoint
 CREATE INDEX "subject_relations_to_idx" ON "subject_relations" USING btree ("to_subject_id");--> statement-breakpoint
 CREATE INDEX "subjects_kind_idx" ON "subjects" USING btree ("kind");--> statement-breakpoint
 CREATE INDEX "subjects_visibility_idx" ON "subjects" USING btree ("visibility");--> statement-breakpoint
 CREATE INDEX "subjects_search_vector_gin_idx" ON "subjects" USING gin ("search_vector");--> statement-breakpoint
-CREATE INDEX "subjects_aliases_trgm_idx" ON "subjects" USING gin ("aliases" gin_trgm_ops);--> statement-breakpoint
+CREATE INDEX "subjects_aliases_trgm_idx" ON "subjects" USING gin (array_to_string("aliases", ' ') gin_trgm_ops);--> statement-breakpoint
 CREATE INDEX "timeline_events_subject_idx" ON "timeline_events" USING btree ("subject_id");--> statement-breakpoint
 CREATE INDEX "timeline_events_container_idx" ON "timeline_events" USING btree ("container_kind","container_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "activity_events_sequence_unique_idx" ON "activity_events" USING btree ("sequence");--> statement-breakpoint
